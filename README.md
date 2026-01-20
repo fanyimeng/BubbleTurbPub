@@ -29,7 +29,6 @@ Software dependencies (installed versions on this machine):
 - `matplotlib`: 3.9.2
 - `scipy`: 1.13.1
 - `seaborn`: 0.13.2
-- `num2tex`: unknown
 - `tqdm`: 4.66.5
 - Optional: CASA (not installed; only needed for
   `data/CAR_B05_MP_C0402_1222test3_simobs_casa.py`)
