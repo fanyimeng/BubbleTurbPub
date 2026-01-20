@@ -39,5 +39,4 @@ appear in `paper/main.tex`.
 
 - `code/brinks86_combine.py` and `code/brinks86_combine_with_regions.py`:
   build the Brinks+86 combined tables used in plots.
-- `data/CAR_B05_MP_C0402_1222test3_simobs_casa.py`: CASA simobserve/tclean script.
 - `git_push.sh`: add/commit/push helper.
