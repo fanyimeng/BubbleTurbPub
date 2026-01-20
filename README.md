@@ -2,6 +2,8 @@
 
 This repository contains analysis scripts, data tables, and LaTeX sources used to study superbubbles and turbulence in the M31 H I disk with combined FAST and JVLA data. 
 
+This will be updated while I am collecting all the necessary files.
+
 ## Contents
 - `plot/` Python figure scripts and generated PDFs.
 - `code/` Bubble and ring parameter tables and helper scripts.
