@@ -27,6 +27,4 @@ This repository contains analysis scripts, data tables, and LaTeX sources used t
   - `python plot/dot_e_balance.py`
 - Most plotting script writes `plot/<script_stem>.pdf` by default.
 
-## Paper build
-- The LaTeX source is `paper/main.tex`.
 
