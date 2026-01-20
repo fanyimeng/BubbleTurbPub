@@ -14,8 +14,6 @@ appear in `paper/main.tex`.
 | `f.mainchart` (c) | `dot_e_vs_turb.pdf` | `plot/dot_e_vs_turb.py` |
 | `f.mainchart` (d) | `dot_e_vs_timescale_insets.pdf` | `plot/dot_e_vs_timescale_insets.py` |
 | `f.combineuv` | `hi_power_spectrum.pdf` | `plot/hi_power_spectrum.py` |
-| `f.type_i_bubbles` | `pv_examples_b10.pdf` | no generator script found in repo |
-| `f.type_i_bubbles` | `pv_examples_b17.pdf` | no generator script found in repo |
 | `f.aoverb` | `a_over_b_vs_r_over_sqrtab.pdf` | `plot/a_over_b_vs_r_over_sqrtab.py` |
 | `f.nhi_ring_preview` | `nhi_ring_masks.pdf` | `plot/nhi_ring_masks.py` |
 | `f.nsf` | `vexp_vs_shear_limit.pdf` | `plot/vexp_vs_shear_limit.py` |
