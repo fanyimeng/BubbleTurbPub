@@ -54,7 +54,7 @@ The PDF files in `plot/` are expected outputs
    python plot/dot_e_balance.py
    ```
 - See `SCRIPTS.md` for the mapping between paper figures and scripts.
-- FITS data used for the paper (shared via a synology NAS):
+- FITS data used for the paper (shared via a NAS):
   - Datacube (18 GB): https://gofile.me/7L8Ih/zWZetZ2dA
   - Other FITS files (zipped, ~300 MB): https://gofile.me/7L8Ih/0zxCBEDZl
   - Password to download: the manuscript number (format like `202x-xx-xxxxx`).
