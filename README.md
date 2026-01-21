@@ -6,7 +6,7 @@ M31 H I superbubble and turbulence study.
 ## Compiled Standalone Software and/or Source Code
 
 - Source code only (no compiled binaries).
-- Primary scripts are in `plot/` and helper code is in `code/`.
+- Primary scripts are in `plot/` and `initial_script` and helper code is in `code/`. 
 
 ## System Requirements
 
@@ -18,7 +18,7 @@ Tested versions (this machine):
 - Python 3.12.2 (conda-forge)
 
 Non-standard hardware:
-- None required. A machine with >20 GB free disk space is recommended if you
+- None required. A machine with >30 GB free disk space is recommended if you
   download the full FITS dataset.
 
 Software dependencies (installed versions on this machine):
@@ -30,63 +30,34 @@ Software dependencies (installed versions on this machine):
 - `scipy`: 1.13.1
 - `seaborn`: 0.13.2
 - `tqdm`: 4.66.5
-- Optional: CASA (not installed; only needed for
-  `data/CAR_B05_MP_C0402_1222test3_simobs_casa.py`)
 
-To reprint versions on your machine:
-```bash
-python scripts/print_versions.py
-```
-
-## Installation Guide
-
-Instructions (from repo root):
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -U pip
-pip install numpy pandas astropy matplotlib scipy seaborn num2tex tqdm
-```
 
 Typical install time on a normal desktop computer:
-- 5 to 10 minutes (depending on network speed and whether wheels are available).
+- 5 to 10 minutes.
 
 ## Demo
 
 Most scripts are lightweight and read small tabular inputs (for example
 `code/1113.tab`), so they can be used as a demo without the large FITS files.
 
-Demo dataset:
-- `data/demo_bubbles.tab` (small subset of bubble parameters).
-
-Demo command (no file edits required):
-```bash
-python -c "import sys; sys.path.append('plot'); import p_per_sn_vs_nsn as m; m.INPUT_TAB='data/demo_bubbles.tab'; m.OUTPUT_PDF='plot/demo_p_per_sn_vs_nsn.pdf'; m.main()"
-```
-
-Expected output:
-- `plot/demo_p_per_sn_vs_nsn.pdf`
-- Console line: `Saved: plot/demo_p_per_sn_vs_nsn.pdf`
-
-Expected runtime on a normal desktop computer:
+Expected runtime on a normal desktop computer for most of the scripts:
 - < 5 seconds.
+
+The PDF files in `plot/` are expected outputs
 
 ## Instructions for Use
 
-1. Run scripts from the repository root (examples in `SCRIPTS.md`).
-2. Many plots require FITS inputs that are not versioned in git. Download and
+- Many plots require FITS inputs that are not versioned in git. Download and
    place them under `data/` with the filenames referenced in each script.
-3. Execute the plot script you need, for example:
+- Execute the plot script you need, for example:
    ```bash
    python plot/dot_e_balance.py
    ```
-
-Optional reproduction instructions (full paper figures):
 - See `SCRIPTS.md` for the mapping between paper figures and scripts.
-- FITS data sources used for the paper:
+- FITS data used for the paper (shared via a synology NAS):
   - Datacube (18 GB): https://gofile.me/7L8Ih/zWZetZ2dA
-  - Other FITS files (zipped): https://gofile.me/7L8Ih/0zxCBEDZl
-  - Password: the manuscript number (format like `202x-xx-xxxxx`).
+  - Other FITS files (zipped, ~300 MB): https://gofile.me/7L8Ih/0zxCBEDZl
+  - Password to download: the manuscript number (format like `202x-xx-xxxxx`).
 
 ## Initial Script Folder (Legacy Catalog Build)
 
@@ -112,12 +83,6 @@ Key drivers and utilities (non-exhaustive):
 - `initial_script/ds9_2_pandas.py` and `initial_script/pandas_2_ds9.py`: DS9
   region conversion utilities.
 
-Typical data flow (example):
-1. DS9 regions -> fixed-width table (`ds9_2_pandas.py` or `bubturb.reg2df`).
-2. Normalize ellipse params, add RA/Dec strings, convert axes to arcsec.
-3. Reassign IDs and curate the table (`cc00_dfProcess.py`).
-4. Extract subcubes and generate PV plots (`cc01_subplot_MP.py`).
-5. Review/edit via `app_v7.py`, then compute derived quantities.
 
 ## Paper Figures and Scripts (Concise Index)
 
