@@ -63,7 +63,7 @@ The PDF files in `plot/` are expected outputs
 
 The `initial_script/` folder holds early, ad-hoc scripts used to assemble the
 HI bubble catalog, extract subcubes, and generate PV plots. Most scripts call
-the shared library `initial_script/bubturb.py`.
+the shared library `initial_script/bubturb.py`. For details, check https://github.com/fanyimeng/BubbleTurbPub/blob/main/INITIAL_SCRIPT.md
 
 Common inputs and formats:
 - Fixed-width tables (`.tab`) read via `pd.read_fwf(...)` and written back with
@@ -86,7 +86,7 @@ Key drivers and utilities (non-exhaustive):
 
 ## Paper Figures and Scripts
 
-In `plot/` there are scripts for calculation and plotting that directly used in the manuscript.
+In `plot/` there are scripts for calculation and plotting that directly used in the manuscript. For details, check https://github.com/fanyimeng/BubbleTurbPub/blob/main/SCRIPTS.md
 
 Figures are listed in the order they appear in `paper/main.tex`.
 
