@@ -59,7 +59,7 @@ The PDF files in `plot/` are expected outputs
   - Other FITS files (zipped, ~300 MB): https://gofile.me/7L8Ih/0zxCBEDZl
   - Password to download: the manuscript number (format like `202x-xx-xxxxx`).
 
-## Initial Script Folder (Legacy Catalog Build)
+## Initial Script Folder
 
 The `initial_script/` folder holds early, ad-hoc scripts used to assemble the
 HI bubble catalog, extract subcubes, and generate PV plots. Most scripts call
@@ -84,7 +84,9 @@ Key drivers and utilities (non-exhaustive):
   region conversion utilities.
 
 
-## Paper Figures and Scripts (Concise Index)
+## Paper Figures and Scripts
+
+In `plot/` there are scripts for calculation and plotting that directly used in the manuscript.
 
 Figures are listed in the order they appear in `paper/main.tex`.
 
