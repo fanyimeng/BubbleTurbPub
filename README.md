@@ -88,9 +88,43 @@ Optional reproduction instructions (full paper figures):
   - Other FITS files (zipped): https://gofile.me/7L8Ih/0zxCBEDZl
   - Password: the manuscript number (format like `202x-xx-xxxxx`).
 
+## Initial Script Folder (Legacy Catalog Build)
+
+The `initial_script/` folder holds early, ad-hoc scripts used to assemble the
+HI bubble catalog, extract subcubes, and generate PV plots. Most scripts call
+the shared library `initial_script/bubturb.py`.
+
+Common inputs and formats:
+- Fixed-width tables (`.tab`) read via `pd.read_fwf(...)` and written back with
+  `DataFrame.to_string(...)` or `tabulate`.
+- DS9 region files (`.reg`) for ellipse visualization and cross-checks.
+- Spectral cube FITS read via `spectral_cube.SpectralCube` and plotted with
+  `pvextractor`.
+
+Key drivers and utilities (non-exhaustive):
+- `initial_script/app_v7.py` (and other `app_v#.py` versions): a lightweight
+  GUI we built to make manual bubble verification and parameter editing fast.
+- `initial_script/cc00_dfProcess.py`: table conversion pipeline driver.
+- `initial_script/cc01_subplot.py` / `initial_script/cc01_subplot_MP.py`: batch
+  PV plotting (single-process and multiprocessing).
+- `initial_script/CC03_trivial_parameters.py`: derived kinematic/size columns.
+- `initial_script/CC05_size_deconvolve.py`: beam deconvolution for radii.
+- `initial_script/ds9_2_pandas.py` and `initial_script/pandas_2_ds9.py`: DS9
+  region conversion utilities.
+
+Typical data flow (example):
+1. DS9 regions -> fixed-width table (`ds9_2_pandas.py` or `bubturb.reg2df`).
+2. Normalize ellipse params, add RA/Dec strings, convert axes to arcsec.
+3. Reassign IDs and curate the table (`cc00_dfProcess.py`).
+4. Extract subcubes and generate PV plots (`cc01_subplot_MP.py`).
+5. Review/edit via `app_v7.py`, then compute derived quantities.
+
 ## Paper Figures and Scripts (Concise Index)
 
 Figures are listed in the order they appear in `paper/main.tex`.
+
+**Full details are in** `SCRIPTS.md` **and** `INITIAL_SCRIPT.md` **(read these for
+complete steps, options, and file-by-file notes).**
 
 | Paper label | PDF in `plot/` | Generator script |
 | --- | --- | --- |
@@ -120,33 +154,3 @@ Key plotting tables (short list):
 
 Other non-figure scripts:
 - `code/brinks86_combine.py`, `code/brinks86_combine_with_regions.py`: build Brinks+86 tables.
-
-## Initial Script Folder (Legacy Catalog Build)
-
-The `initial_script/` folder holds early, ad-hoc scripts used to assemble the
-HI bubble catalog, extract subcubes, and generate PV plots. Most scripts call
-the shared library `initial_script/bubturb.py`.
-
-Common inputs and formats:
-- Fixed-width tables (`.tab`) read via `pd.read_fwf(...)` and written back with
-  `DataFrame.to_string(...)` or `tabulate`.
-- DS9 region files (`.reg`) for ellipse visualization and cross-checks.
-- Spectral cube FITS read via `spectral_cube.SpectralCube` and plotted with
-  `pvextractor`.
-
-Key drivers and utilities (non-exhaustive):
-- `initial_script/app_v7.py`: Streamlit UI for interactive review/editing.
-- `initial_script/cc00_dfProcess.py`: table conversion pipeline driver.
-- `initial_script/cc01_subplot.py` / `initial_script/cc01_subplot_MP.py`: batch
-  PV plotting (single-process and multiprocessing).
-- `initial_script/CC03_trivial_parameters.py`: derived kinematic/size columns.
-- `initial_script/CC05_size_deconvolve.py`: beam deconvolution for radii.
-- `initial_script/ds9_2_pandas.py` and `initial_script/pandas_2_ds9.py`: DS9
-  region conversion utilities.
-
-Typical data flow (example):
-1. DS9 regions -> fixed-width table (`ds9_2_pandas.py` or `bubturb.reg2df`).
-2. Normalize ellipse params, add RA/Dec strings, convert axes to arcsec.
-3. Reassign IDs and curate the table (`cc00_dfProcess.py`).
-4. Extract subcubes and generate PV plots (`cc01_subplot_MP.py`).
-5. Review/edit via `app_v7.py`, then compute derived quantities.
