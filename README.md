@@ -55,9 +55,10 @@ The PDF files in `plot/` are expected outputs
    ```
 - See `SCRIPTS.md` for the mapping between paper figures and scripts.
 - FITS data used for the paper (shared via a NAS):
-  - Datacube (18 GB): https://gofile.me/7L8Ih/zWZetZ2dA
-  - Other FITS files (zipped, ~300 MB): https://gofile.me/7L8Ih/0zxCBEDZl
-  - Password to download: the manuscript number (format like `202x-xx-xxxxx`).
+  - Datacube (18 GB): please contact the authors if you need access.
+  - Other FITS files (zipped, ~300 MB): the shared link and password are stored
+    in a local, git-ignored file for private use.
+  - Check `local/private_data_access.txt` on your local machine.
 
 ## Initial Script Folder
 
