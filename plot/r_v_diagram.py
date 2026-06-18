@@ -75,7 +75,7 @@ def _shrink_row_axes_horiz(ax_list, frac):
 def plot_five_panels_three_rows(
     # ===== 数据与表 =====
     fits_rotated_a='../data/jcomb_submed.mom0.-600-45_rotated.fits',
-    table_path='../code/1113.tab',
+    table_path='../code/m31_bubble_catalog_final_yes_118.tab',
     brinks_region_path="../data/b86_inpix_id.reg",
     brinks_region_show=True,
     brinks_region_marker="^",
@@ -886,7 +886,7 @@ if __name__ == '__main__':
     plot_five_panels_three_rows(
         # 顶行 (a)
         fits_rotated_a='../data/jcomb_submed.mom0.-600-45_rotated.fits',
-        table_path='../code/1113.tab',
+        table_path='../code/m31_bubble_catalog_final_yes_118.tab',
         a_norm_kind='power', a_power_gamma=0.6,
         a_vmin=0.1, a_vmax=10,
         a_xlim_arcmin=(-110, 110), a_ylim_arcmin=(-40, 40),

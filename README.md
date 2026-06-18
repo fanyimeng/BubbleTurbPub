@@ -1,5 +1,16 @@
 # M31 H I Superbubbles and Turbulence
 
+## Data Availability
+
+The data required to reproduce the analysis are available from the Tsinghua Cloud
+link: https://cloud.tsinghua.edu.cn/d/459ac2c2c8c847e68781/
+
+The downloadable package is about 6 GB and includes the data-restore scripts and
+instructions. After downloading, follow the included instructions to run the
+rotation/restore script. The restored data products occupy about 18 GB on disk.
+The unrestored data files can also be opened directly; they are stored with the
+long axis horizontal to avoid disk space otherwise spent on NaN-only padding.
+
 This repository contains the analysis scripts and figure-generation code for the
 M31 H I superbubble and turbulence study.
 
@@ -38,7 +49,7 @@ Typical install time on a normal desktop computer:
 ## Demo
 
 Most scripts are lightweight and read small tabular inputs (for example
-`code/1113.tab`), so they can be used as a demo without the large FITS files.
+`code/m31_bubble_catalog_final_yes_118.tab`), so they can be used as a demo without the large FITS files.
 
 Expected runtime on a normal desktop computer for most of the scripts:
 - < 5 seconds.
@@ -49,16 +60,17 @@ The PDF files in `plot/` are expected outputs
 
 - Many plots require FITS inputs that are not versioned in git. Download and
    place them under `data/` with the filenames referenced in each script.
+- The paper data package is available at:
+  https://cloud.tsinghua.edu.cn/d/459ac2c2c8c847e68781/
+  It is about 6 GB to download and about 18 GB after running the included
+  rotation/restore script. The unrestored files can also be opened directly;
+  they are stored with the long axis horizontal to avoid disk space otherwise
+  spent on NaN-only padding.
 - Execute the plot script you need, for example:
    ```bash
    python plot/dot_e_balance.py
    ```
 - See `SCRIPTS.md` for the mapping between paper figures and scripts.
-- FITS data used for the paper (shared via a NAS):
-  - Datacube (18 GB): please contact the authors if you need access.
-  - Other FITS files (zipped, ~300 MB): the shared link and password are stored
-    in a local, git-ignored file for private use.
-  - Check `local/private_data_access.txt` on your local machine.
 
 ## Initial Script Folder
 
@@ -114,7 +126,8 @@ complete steps, options, and file-by-file notes).**
 | `f.moltohiratio` | `h2_hi_ratio_vs_r.pdf` | `plot/h2_hi_ratio_vs_r.py` |
 
 Key plotting tables (short list):
-- `code/1113.tab`: main bubble catalog used by most plots; also the ring table.
+- `code/m31_bubble_catalog_final_yes_118.tab`: final 118-row paper bubble catalog used by the plotting scripts; also the ring table.
+- `code/m31_bubble_candidates_final_yes_no_365.csv`: final 365-candidate yes/no catalog, including rejected candidates.
 - `data/profile_resampled_{max,min,med}.tsv`: resampled radial profiles.
 - `data/profile_output_VLA_JCOMB.txt`: major-axis profile for `plot/hi_profile_major_axis.py`.
 - `data/brinks+86/brinks86_combined.fwf`: Brinks+86 comparison table.

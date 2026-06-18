@@ -537,7 +537,7 @@ def plot_bubble_r_v_age_aligned(
 # -----------------------
 if __name__ == "__main__":
     plot_bubble_r_v_age_aligned(
-        bubble_table_path="../code/1113.tab",
+        bubble_table_path="../code/m31_bubble_catalog_final_yes_118.tab",
         r_fits_path="../data/r-m31-jcomb_modHeader.fits",
         alpha_fits_path="../data/alpha-m31-jcomb_modHeader.fits",
         mom0_fits_path="../data/jcomb_vcube_scaled2_mom0.fits",

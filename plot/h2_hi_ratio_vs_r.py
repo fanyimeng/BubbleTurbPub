@@ -15,7 +15,7 @@ Features
    - y-axis in log scale.
 
 2) Superbubble points:
-   - Bubble catalog '../code/1113.tab' (fixed width), with at least columns:
+   - Bubble catalog '../code/m31_bubble_catalog_final_yes_118.tab' (fixed width), with at least columns:
        'ra_pix', 'dec_pix', 'major', 'minor', 'pa', 'radius_pc',
        (n_HI columns are ignored for plotting; bubbles are fixed red).
    - For each bubble:
@@ -38,7 +38,7 @@ Inputs (defaults)
 RADIUS_FITS_PATH = "../data/r-m31-jcomb_modHeader.fits"       (pc)
 RATIO_FITS_PATH  = "../data/M31_H2_to_HI_ratio.fits"          (dimensionless, H2/HI)
 ALPHA_FITS_PATH  = "../data/alpha-m31-jcomb_modHeader.fits"   (deg)
-BUBBLE_TAB_PATH  = "../code/1113.tab"
+BUBBLE_TAB_PATH  = "../code/m31_bubble_catalog_final_yes_118.tab"
 
 Output
 ------
@@ -59,7 +59,7 @@ from matplotlib.lines import Line2D
 RADIUS_FITS_PATH = "../data/r-m31-jcomb_modHeader.fits"         # pc
 RATIO_FITS_PATH  = "../data/M31_H2_to_HI_ratio.fits"            # H2/HI
 ALPHA_FITS_PATH  = "../data/alpha-m31-jcomb_modHeader.fits"     # deg
-BUBBLE_TAB_PATH  = "../code/1113.tab"
+BUBBLE_TAB_PATH  = "../code/m31_bubble_catalog_final_yes_118.tab"
 
 FIGURE_PDF       = "h2_hi_ratio_vs_r.pdf"
 

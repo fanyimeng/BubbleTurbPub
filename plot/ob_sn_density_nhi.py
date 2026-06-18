@@ -9,7 +9,7 @@ This version (v3+style+count+nHI-color, with tweaks):
   * 去掉网格；ticks 向内且四边显示。
   * x 轴标签统一为：Distance to M31's center: R [kpc]
   * 气泡（SNe scatter）默认更大。
-  * 所有 bubble 数据从 ../code/1113.tab 读取。
+  * 所有 bubble 数据从 ../code/m31_bubble_catalog_final_yes_118.tab 读取。
   * 气泡散点在 y 轴仍为 SNe 体积密度，使用固定红色（不按数据染色），边框关闭。
   * Kang+2009 只画灰色阴影，不再画线。
   * bubble alpha = 0.7。
@@ -287,7 +287,7 @@ def plot_one_axis_OB_and_SNe(
 def main(
     kang_path="../code/kang_09_table2.dat",
     r_fits_path="../data/r-m31-jcomb_modHeader.fits",
-    bubble_tab_path="../code/1113.tab",
+    bubble_tab_path="../code/m31_bubble_catalog_final_yes_118.tab",
     mom0_fits_path="../data/jcomb_vcube_scaled2_mom0.fits",
     alpha_fits_path="../data/alpha-m31-jcomb_modHeader.fits",
     AGE_COL="Age_02",
@@ -426,7 +426,7 @@ def main(
     )
 
 if __name__ == "__main__":
-    # 示例调用：bubble 来自 ../code/1113.tab（固定红色，不按数据染色）
+    # 示例调用：bubble 来自 ../code/m31_bubble_catalog_final_yes_118.tab（固定红色，不按数据染色）
     main(
         SCALE_OB1=1/1e3/1,
         SCALE_OB2=1.0/5e3,
@@ -446,7 +446,7 @@ if __name__ == "__main__":
         SNE_ERR_ZORDER=1,
         SNE_YERR_FRAC=0.50,
 
-        bubble_tab_path="../code/1113.tab",
+        bubble_tab_path="../code/m31_bubble_catalog_final_yes_118.tab",
         BUBBLE_NHI_COL="n_HI_ring_cm-3",
         out_pdf="ob_sn_density_nhi.pdf",
     )

@@ -17,7 +17,7 @@ from matplotlib.lines import Line2D
 # =========================
 # User-configurable paths
 # =========================
-BUBBLE_TABLE_PATH = Path("../code/1113.tab")
+BUBBLE_TABLE_PATH = Path("../code/m31_bubble_catalog_final_yes_118.tab")
 ALPHA_FITS_PATH   = Path("../data/alpha-m31-jcomb_modHeader.fits")
 MOM0_FITS_PATH    = Path("../data/jcomb_vcube_scaled2_mom0.fits")
 RMAP_FITS_PATH    = Path("../data/r-m31-jcomb_modHeader.fits")

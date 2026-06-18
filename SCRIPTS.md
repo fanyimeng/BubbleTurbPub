@@ -26,7 +26,7 @@ appear in `paper/main.tex`.
 
 ## Key Plotting Tables (short list)
 
-- `code/1113.tab`: main bubble catalog used by most plots; effectively also the
+- `code/m31_bubble_catalog_final_yes_118.tab`: main bubble catalog used by most plots; effectively also the
   ring table for `n_HI_ring_cm-3`.
 - `data/profile_resampled_{max,min,med}.tsv`: resampled radial profiles used for
   turbulence and MRI curves.

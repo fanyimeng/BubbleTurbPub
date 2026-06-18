@@ -5,27 +5,43 @@ Dot-e bubble vs turbulence scatter (bubble dotE vs local turbulent dotE).
 
 Inputs
 ------
-- bubble_table_path : Fixed-width bubble table (default: ../code/1113.tab).
-- ring_table_path   : Ring table providing n_HI_ring_cm-3 (default: ../code/1113.tab).
-- alpha_fits        : Angle map FITS for geometry (default: ../data/alpha-m31-jcomb_modHeader.fits).
-- r_fits            : Deprojected radius map FITS in pc (default: ../data/r-m31-jcomb_modHeader.fits).
-- prof_max_path     : Resampled profile TSV (max branch) with columns ['r', x1_mom0, x1_mom2].
-- prof_min_path     : Resampled profile TSV (min branch) with columns ['r', x1_mom0, x1_mom2].
+- bubble_table_path : Fixed-width bubble table (default: code/m31_bubble_catalog_final_yes_118.tab).
+- ring_table_path   : Ring table providing n_HI_ring_cm-3 (default: code/m31_bubble_catalog_final_yes_118.tab).
+- alpha_fits        : Angle map FITS for geometry.
+- r_fits            : Deprojected radius map FITS in pc.
+- turb_table_path   : Current panel-a ROHSA turbulence table with dote p16/p50/p84 columns.
 
 Outputs
 -------
-- dot_e_vs_turb.pdf : Scatter of bubble dotE (y) vs turbulent dotE at same R (x).
+- runs/checks/bubbleturbpub_panel_c/dot_e_vs_turb.pdf : Scatter of bubble dotE vs turbulent dotE.
 - Optional CSV (if export_table=True) with per-bubble values.
 
 Notes
 -----
 - dotE_bubble follows dot_e_balance: dotE = 0.5 * rho * v^3 / (h * pc2cm) in 10^-28 units,
   with h_pc = 182 + 16 * R_kpc, rho = 1.673e-24 * n_ring.
-- Turbulent dotE is interpolated at each bubble radius from the max/min profile curves.
-  You can choose the combination via turb_value_mode: 'mean', 'min', or 'max'.
+- Turbulent dotE is interpolated at each bubble radius from the current ROHSA
+  panel-a table by default, using the p50 branch for turb_value_mode='mean'.
+  The legacy min/max profile curves remain available as a fallback.
 """
 
 from __future__ import annotations
+
+import os
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+LOCAL_DIR = REPO_ROOT / ".local"
+MPL_DIR = LOCAL_DIR / "matplotlib"
+CACHE_DIR = LOCAL_DIR / "cache"
+FONTCONFIG_DIR = CACHE_DIR / "fontconfig"
+for directory in (MPL_DIR, CACHE_DIR, FONTCONFIG_DIR):
+    directory.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("MPLCONFIGDIR", str(MPL_DIR))
+os.environ.setdefault("XDG_CACHE_HOME", str(CACHE_DIR))
+os.environ.setdefault("FONTCONFIG_PATH", "/opt/homebrew/etc/fonts")
+os.environ.setdefault("FONTCONFIG_FILE", "/opt/homebrew/etc/fonts/fonts.conf")
+os.environ.setdefault("FONTCONFIG_CACHE", str(FONTCONFIG_DIR))
 
 import numpy as np
 import pandas as pd
@@ -36,21 +52,33 @@ from matplotlib.colors import Normalize
 from matplotlib import colors as mcolors
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from matplotlib.lines import Line2D
-from pathlib import Path
 
 # constants
 pc2cm = 3e18
 COSI = np.cos(np.deg2rad(77.0))
+DEFAULT_TURB_TABLE = REPO_ROOT / "runs" / "checks" / "rohsa_compare" / "panel_a_rohsa_turbulence" / "merged_sampling_profile.tsv"
+DEFAULT_PROF_MAX_PATH = REPO_ROOT / "data" / "profile_resampled_max.tsv"
+DEFAULT_PROF_MIN_PATH = REPO_ROOT / "data" / "profile_resampled_min.tsv"
+DEFAULT_BUBBLE_TABLE = REPO_ROOT / "catalog" / "working" / "m31_bubble_catalog_final_yes_118.tab"
+DEFAULT_RING_TABLE = REPO_ROOT / "catalog" / "working" / "m31_bubble_catalog_final_yes_118.tab"
+DEFAULT_ALPHA_FITS = REPO_ROOT / "data" / "alpha-m31-jcomb_modHeader.fits"
+DEFAULT_R_FITS = REPO_ROOT / "data" / "r-m31-jcomb_modHeader.fits"
+DEFAULT_BRINKS_TABLE = REPO_ROOT / "data" / "brinks+86" / "brinks86_combined.fwf"
+DEFAULT_OUTPUT = REPO_ROOT / "plot" / "dot_e_vs_turb.pdf"
 
 TURB_MOM0_COL = "x1_mom0"
 TURB_MOM2_COL = "x1_mom2"
+TURB_TABLE_XCOL = "r_center_kpc"
+TURB_TABLE_LO_COL = "dote_p16_1e-28"
+TURB_TABLE_MID_COL = "dote_p50_1e-28"
+TURB_TABLE_HI_COL = "dote_p84_1e-28"
 BUBBLE_MARKER_SIZE = 65
 BUBBLE_MARKER = "o"
 BUBBLE_BASE_FACE_COLOR = (0.9, 0.4, 0.4)
-BUBBLE_FACE_ALPHA = 0.7
-BUBBLE_EDGE_ALPHA = 0.0
-BUBBLE_EDGE_LW = 0.0
-BUBBLE_EDGE_COLOR = (0.9, 0.2, 0.2)
+BUBBLE_FACE_ALPHA = 0.55
+BUBBLE_EDGE_ALPHA = 1.0
+BUBBLE_EDGE_LW = 0.45
+BUBBLE_EDGE_COLOR = "white"
 BUBBLE_SHOW_ERRORBAR = False
 BUBBLE_ERRORBAR_USE_DATA_COLOR = True
 BUBBLE_ERRORBAR_DATA_ALPHA = 0.4
@@ -62,10 +90,10 @@ BUBBLE_ERRORBAR_ZORDER = 5
 BRINKS_MARKER = "^"
 BRINKS_MARKER_SIZE = 55
 BRINKS_FACE_COLOR = None
-BRINKS_FACE_ALPHA = 0.6
-BRINKS_EDGE_COLOR = (0.6, 0.6, 0.9)
-BRINKS_EDGE_ALPHA = 0.6
-BRINKS_EDGE_LW = 0.0
+BRINKS_FACE_ALPHA = 0.55
+BRINKS_EDGE_COLOR = "white"
+BRINKS_EDGE_ALPHA = 1.0
+BRINKS_EDGE_LW = 0.45
 BRINKS_MARKER_COLOR = (0.6, 0.6, 0.9)
 BRINKS_SHOW = True
 BRINKS_ENERGY_SCALE = 0.44
@@ -142,7 +170,7 @@ def compute_turb_from_profile_df(df: pd.DataFrame, branch: str):
     t_diss = np.where(v > 0.0, 2.0 * h_pc * pc2cm / v, np.inf)
 
     rho = 1.67e-24 * n_HI
-    ek_density = 0.5 * rho * v**2
+    ek_density = 1.5 * rho * v**2
     rate = ek_density / t_diss * 1e28
     return r_kpc, rate
 
@@ -150,6 +178,50 @@ def compute_turb_from_profile_df(df: pd.DataFrame, branch: str):
 def interpolate_turb_at_r(r_grid, rate_grid, r_targets):
     """Interpolate turbulent rate at target radii."""
     return np.interp(r_targets, r_grid, rate_grid, left=np.nan, right=np.nan)
+
+
+def load_turbulence_branches(
+    turb_table_path,
+    prof_max_path,
+    prof_min_path,
+    x_column=TURB_TABLE_XCOL,
+    low_column=TURB_TABLE_LO_COL,
+    mid_column=TURB_TABLE_MID_COL,
+    high_column=TURB_TABLE_HI_COL,
+):
+    """Return low/mid/high turbulent dot-e branches, preferring the current ROHSA table."""
+    table_path = Path(turb_table_path) if turb_table_path is not None else None
+    if table_path is not None and table_path.exists():
+        df = pd.read_csv(table_path, sep=r"\t", engine="python")
+        required = (x_column, low_column, mid_column, high_column)
+        missing = [column for column in required if column not in df.columns]
+        if missing:
+            raise KeyError(f"Missing turbulence columns in {table_path}: {missing}")
+        x = pd.to_numeric(df[x_column], errors="coerce").to_numpy(dtype=float)
+        y_lo = pd.to_numeric(df[low_column], errors="coerce").to_numpy(dtype=float)
+        y_mid = pd.to_numeric(df[mid_column], errors="coerce").to_numpy(dtype=float)
+        y_hi = pd.to_numeric(df[high_column], errors="coerce").to_numpy(dtype=float)
+        mask = np.isfinite(x) & np.isfinite(y_lo) & np.isfinite(y_mid) & np.isfinite(y_hi)
+        order = np.argsort(x[mask])
+        print(
+            f"[DotEvsTurb] Turbulence table source: {table_path} "
+            f"(rows used={np.count_nonzero(mask)})"
+        )
+        return x[mask][order], y_lo[mask][order], y_mid[mask][order], y_hi[mask][order]
+
+    df_max = pd.read_csv(prof_max_path, sep=r"\t", engine="python")
+    df_min = pd.read_csv(prof_min_path, sep=r"\t", engine="python")
+    r_kpc_hi, rate_hi = compute_turb_from_profile_df(df_max, branch="max")
+    r_kpc_lo, rate_lo = compute_turb_from_profile_df(df_min, branch="min")
+    x_lo = max(np.nanmin(r_kpc_lo), np.nanmin(r_kpc_hi))
+    x_hi = min(np.nanmax(r_kpc_lo), np.nanmax(r_kpc_hi))
+    x_mid = r_kpc_hi[(r_kpc_hi >= x_lo) & (r_kpc_hi <= x_hi)]
+    y_hi = np.interp(x_mid, r_kpc_hi, rate_hi, left=np.nan, right=np.nan)
+    y_lo = np.interp(x_mid, r_kpc_lo, rate_lo, left=np.nan, right=np.nan)
+    y_mid = 0.5 * (y_lo + y_hi)
+    mask = np.isfinite(x_mid) & np.isfinite(y_lo) & np.isfinite(y_mid) & np.isfinite(y_hi)
+    print(f"[DotEvsTurb] Falling back to profile sources: {prof_min_path}, {prof_max_path}.")
+    return x_mid[mask], y_lo[mask], y_mid[mask], y_hi[mask]
 
 def _auto_vmin_vmax(vals, q_lo=0.02, q_hi=0.98):
     v = np.asarray(vals, dtype=float)
@@ -304,13 +376,14 @@ def plot_dot_e_vs_turb(
     ylim=(1e-2, 1e3),
 
     # inputs
-    bubble_table_path="../code/1113.tab",
-    ring_table_path="../code/1113.tab",
-    alpha_fits="../data/alpha-m31-jcomb_modHeader.fits",
-    r_fits="../data/r-m31-jcomb_modHeader.fits",
+    bubble_table_path=DEFAULT_BUBBLE_TABLE,
+    ring_table_path=DEFAULT_RING_TABLE,
+    alpha_fits=DEFAULT_ALPHA_FITS,
+    r_fits=DEFAULT_R_FITS,
     nring_column="n_HI_ring_cm-3",
-    prof_max_path="../data/profile_resampled_max.tsv",
-    prof_min_path="../data/profile_resampled_min.tsv",
+    turb_table_path=DEFAULT_TURB_TABLE,
+    prof_max_path=DEFAULT_PROF_MAX_PATH,
+    prof_min_path=DEFAULT_PROF_MIN_PATH,
     turb_value_mode="mean",  # 'mean', 'min', 'max'
 
     # styles
@@ -337,7 +410,7 @@ def plot_dot_e_vs_turb(
     colorbar_label=r"$R$ [kpc]",
 
     # Brinks+86 overlay
-    brinks_table_path="../data/brinks+86/brinks86_combined.fwf",
+    brinks_table_path=DEFAULT_BRINKS_TABLE,
     brinks_show=BRINKS_SHOW,
     brinks_marker_size=BRINKS_MARKER_SIZE,
     brinks_marker=BRINKS_MARKER,
@@ -374,7 +447,8 @@ def plot_dot_e_vs_turb(
     export_path="dot_e_vs_turb.csv",
 
     # output
-    output_pdf="dot_e_vs_turb.pdf",
+    output_pdf=DEFAULT_OUTPUT,
+    panel_label="a",
 ):
     """Scatter of bubble dotE vs turbulent dotE at bubble radii."""
 
@@ -396,13 +470,19 @@ def plot_dot_e_vs_turb(
     ax.yaxis.set_major_locator(mticker.LogLocator(base=10, numticks=5))
     ax.xaxis.set_minor_locator(mticker.NullLocator())
     ax.yaxis.set_minor_locator(mticker.NullLocator())
-    ax.text(0.02, 0.98, "c", transform=ax.transAxes, ha="left", va="top", fontsize=11, fontweight="bold")
+    if panel_label:
+        ax.text(0.02, 0.98, panel_label, transform=ax.transAxes, ha="left", va="top", fontsize=11, fontweight="bold")
 
-    # load turbulence profiles
-    df_max = pd.read_csv(prof_max_path, sep=r"\t", engine="python")
-    df_min = pd.read_csv(prof_min_path, sep=r"\t", engine="python")
-    r_kpc_max, rate_max = compute_turb_from_profile_df(df_max, branch="max")
-    r_kpc_min, rate_min = compute_turb_from_profile_df(df_min, branch="min")
+    output_pdf = Path(output_pdf)
+    output_pdf.parent.mkdir(parents=True, exist_ok=True)
+
+    # Load turbulence branches. The default is the current panel-a ROHSA table
+    # with thermal-subtracted nonthermal widths and the 3/2 turbulent-energy prefactor.
+    r_kpc_turb, rate_min, rate_mid, rate_max = load_turbulence_branches(
+        turb_table_path=turb_table_path,
+        prof_max_path=prof_max_path,
+        prof_min_path=prof_min_path,
+    )
 
     # bubble dotE
     bubble = compute_bubble_dote(
@@ -414,10 +494,11 @@ def plot_dot_e_vs_turb(
     )
 
     # interpolate turbulence at bubble R
-    turb_at_r_max = interpolate_turb_at_r(r_kpc_max, rate_max, bubble["R_kpc"])
-    turb_at_r_min = interpolate_turb_at_r(r_kpc_min, rate_min, bubble["R_kpc"])
+    turb_at_r_max = interpolate_turb_at_r(r_kpc_turb, rate_max, bubble["R_kpc"])
+    turb_at_r_min = interpolate_turb_at_r(r_kpc_turb, rate_min, bubble["R_kpc"])
+    turb_at_r_mid = interpolate_turb_at_r(r_kpc_turb, rate_mid, bubble["R_kpc"])
     if turb_value_mode == "mean":
-        turb_at_r = 0.5 * (turb_at_r_max + turb_at_r_min)
+        turb_at_r = turb_at_r_mid
     elif turb_value_mode == "max":
         turb_at_r = turb_at_r_max
     elif turb_value_mode == "min":
@@ -448,7 +529,8 @@ def plot_dot_e_vs_turb(
         colors = np.repeat(np.array(base_rgba)[None, :], len(r_kpc_vals), axis=0)
 
     facecolors = np.stack([np.r_[c[:3], bubble_marker_face_alpha] for c in colors])
-    edgecolors = None
+    edge_rgba = mcolors.to_rgba(bubble_marker_edge_color, alpha=bubble_marker_edge_alpha)
+    edgecolors = np.repeat(np.array(edge_rgba)[None, :], len(r_kpc_vals), axis=0)
 
     # filter finite points
     mask = np.isfinite(turb_at_r) & np.isfinite(bubble["dotE_bubble"])
@@ -458,8 +540,8 @@ def plot_dot_e_vs_turb(
         s=bubble_marker_size,
         marker=bubble_marker,
         facecolor=facecolors[mask],
-        edgecolor="none",
-        linewidths=0,
+        edgecolor=edgecolors[mask],
+        linewidths=bubble_marker_edge_lw,
         zorder=bubble_marker_zorder,
     )
 
@@ -542,10 +624,11 @@ def plot_dot_e_vs_turb(
                     dote_b = energy_erg / (volume_cm3 * age_s)
                 dote_b_scaled = dote_b * 1e28
 
-                turb_b = interpolate_turb_at_r(r_kpc_max, rate_max, r_b)
-                turb_b2 = interpolate_turb_at_r(r_kpc_min, rate_min, r_b)
+                turb_b = interpolate_turb_at_r(r_kpc_turb, rate_max, r_b)
+                turb_b2 = interpolate_turb_at_r(r_kpc_turb, rate_min, r_b)
+                turb_b_mid = interpolate_turb_at_r(r_kpc_turb, rate_mid, r_b)
                 if turb_value_mode == "mean":
-                    turb_both = 0.5 * (turb_b + turb_b2)
+                    turb_both = turb_b_mid
                 elif turb_value_mode == "max":
                     turb_both = turb_b
                 else:
@@ -555,6 +638,8 @@ def plot_dot_e_vs_turb(
                 brinks_x = turb_both
                 brinks_y = dote_b_scaled
                 if np.any(mb):
+                    face_base = brinks_marker_color if brinks_face_color is None else brinks_face_color
+                    face_rgba = mcolors.to_rgba(face_base, alpha=brinks_face_alpha)
                     edge_base = brinks_edge_color if brinks_edge_color is not None else brinks_marker_color
                     edge_rgba = mcolors.to_rgba(edge_base, alpha=brinks_edge_alpha)
                     brinks_handle = ax.scatter(
@@ -562,9 +647,9 @@ def plot_dot_e_vs_turb(
                         dote_b_scaled[mb],
                         marker=brinks_marker,
                         s=brinks_marker_size,
-                        facecolor=edge_rgba,
+                        facecolor=face_rgba,
                         edgecolor=edge_rgba,
-                        linewidths=max(brinks_marker_lw, 0.0),
+                        linewidths=brinks_marker_lw,
                         zorder=12,
                         label=LEGEND_LABEL_BRINKS,
                     )
@@ -625,7 +710,7 @@ def plot_dot_e_vs_turb(
         [], [], marker=bubble_marker, linestyle='None',
         markersize=np.sqrt(bubble_marker_size),
         markerfacecolor=mcolors.to_rgba(bubble_marker_edge_color if bubble_base_face_color is None else bubble_base_face_color, alpha=bubble_marker_face_alpha),
-        markeredgecolor=mcolors.to_rgba(bubble_marker_edge_color, alpha=max(bubble_marker_edge_alpha, 0.1)),
+        markeredgecolor=mcolors.to_rgba(bubble_marker_edge_color, alpha=bubble_marker_edge_alpha),
         markeredgewidth=bubble_marker_edge_lw,
         label=LEGEND_LABEL_BUBBLES,
     )

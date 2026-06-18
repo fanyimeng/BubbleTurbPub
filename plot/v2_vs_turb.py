@@ -5,8 +5,8 @@ Bubble v^2 vs turbulent v^2 at the same radius (R_kpc).
 
 Inputs
 ------
-- bubble_table_path : Fixed-width bubble table (default: ../code/1113.tab).
-- ring_table_path   : Ring table providing n_HI_ring_cm-3 for coloring (default: ../code/1113.tab).
+- bubble_table_path : Fixed-width bubble table (default: ../code/m31_bubble_catalog_final_yes_118.tab).
+- ring_table_path   : Ring table providing n_HI_ring_cm-3 for coloring (default: ../code/m31_bubble_catalog_final_yes_118.tab).
 - alpha_fits        : Angle map FITS (used only for alignment; not needed for v^2 itself).
 - r_fits            : Deprojected radius map FITS in pc (used to locate R_kpc for interpolation).
 - prof_max_path     : Resampled profile TSV (max branch) with columns ['r', x1_mom0, x1_mom2].
@@ -108,8 +108,8 @@ def _auto_vmin_vmax(vals, q_lo=0.02, q_hi=0.98):
 def plot_v2_vs_turb(
     xlim=(30, 2e3),
     ylim=(30, 2e3),
-    bubble_table_path="../code/1113.tab",
-    ring_table_path="../code/1113.tab",
+    bubble_table_path="../code/m31_bubble_catalog_final_yes_118.tab",
+    ring_table_path="../code/m31_bubble_catalog_final_yes_118.tab",
     alpha_fits="../data/alpha-m31-jcomb_modHeader.fits",
     r_fits="../data/r-m31-jcomb_modHeader.fits",
     nring_column="n_HI_ring_cm-3",

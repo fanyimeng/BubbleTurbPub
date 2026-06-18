@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Energy budget figure — turbulence band + bubbles + optional MRI curve (continuous n_ring coloring)
+"""Energy budget figure with a turbulence band, bubbles, optional MRI, and Brinks+86."""
 
-This version uses:
-- nring from '../code/1110.tab' : column 'n_HI_ring_cm-3' for BOTH dotE computation and bubble COLORING.
-- Coloring is continuous (no discrete bins). The color scale uses a linear Normalize
-  with vmin/vmax taken automatically from data percentiles unless you override.
-- MRI curve derived from the median resampled profile (profile_resampled_med.tsv) following main_chart_sum.
+import os
+from pathlib import Path
 
-Output:
-- dot_e_balance.pdf (or the name you pass in)
-"""
+REPO_ROOT = Path(__file__).resolve().parents[1]
+LOCAL_DIR = REPO_ROOT / ".local"
+MPL_DIR = LOCAL_DIR / "matplotlib"
+CACHE_DIR = LOCAL_DIR / "cache"
+FONTCONFIG_DIR = CACHE_DIR / "fontconfig"
+for directory in (MPL_DIR, CACHE_DIR, FONTCONFIG_DIR):
+    directory.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("MPLCONFIGDIR", str(MPL_DIR))
+os.environ.setdefault("XDG_CACHE_HOME", str(CACHE_DIR))
+os.environ.setdefault("FONTCONFIG_PATH", "/opt/homebrew/etc/fonts")
+os.environ.setdefault("FONTCONFIG_FILE", "/opt/homebrew/etc/fonts/fonts.conf")
+os.environ.setdefault("FONTCONFIG_CACHE", str(FONTCONFIG_DIR))
 
 import numpy as np
 import pandas as pd
@@ -25,7 +30,6 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from matplotlib.legend_handler import HandlerTuple
 from matplotlib.patches import Rectangle
 from matplotlib.lines import Line2D
-from pathlib import Path
 
 # -----------------------
 # Constants and column choices
@@ -33,6 +37,14 @@ from pathlib import Path
 pc2cm = 3e18
 SEC_PER_MYR = 1e6 * 3.154e7
 COSI = np.cos(np.deg2rad(77.0))
+DEFAULT_TURB_TABLE = REPO_ROOT / "runs" / "checks" / "rohsa_compare" / "panel_a_rohsa_turbulence" / "merged_sampling_profile.tsv"
+DEFAULT_MRI_PROFILE = REPO_ROOT / "data" / "profile_resampled_med.tsv"
+DEFAULT_ROHSA_MRI_PROFILE = REPO_ROOT / "runs" / "checks" / "rohsa_compare" / "panel_a_rohsa_turbulence" / "merged_mri_profile.tsv"
+DEFAULT_BUBBLE_TABLE = REPO_ROOT / "catalog" / "working" / "m31_bubble_catalog_final_yes_118.tab"
+DEFAULT_ALPHA_FITS = REPO_ROOT / "data" / "alpha-m31-jcomb_modHeader.fits"
+DEFAULT_R_FITS = REPO_ROOT / "data" / "r-m31-jcomb_modHeader.fits"
+DEFAULT_RING_TABLE = REPO_ROOT / "catalog" / "working" / "m31_bubble_catalog_final_yes_118.tab"
+DEFAULT_BRINKS_TABLE = REPO_ROOT / "data" / "brinks+86" / "brinks86_combined.fwf"
 
 FIG_DPI = 100
 SAVEFIG_DPI = 100
@@ -95,6 +107,9 @@ BUBBLE_ERRORBAR_ZORDER = 5
 # Which profile columns to use for turbulence computation:
 TURB_MOM0_COL = "x1_mom0"
 TURB_MOM2_COL = "x1_mom2"
+TURB_TABLE_XCOL = "r_center_kpc"
+TURB_TABLE_LO_COL = "dote_p16_1e-28"
+TURB_TABLE_HI_COL = "dote_p84_1e-28"
 
 
 # -----------------------
@@ -154,7 +169,7 @@ def compute_turb_from_profile_df(df: pd.DataFrame, branch: str):
     t_diss = np.where(v > 0.0, 2.0 * h_pc * pc2cm / v, np.inf)
 
     rho = 1.67e-24 * n_HI
-    ek_density = 0.5 * rho * v**2
+    ek_density = 1.5 * rho * v**2
     rate = ek_density / t_diss * 1e28
     return r_kpc, rate
 
@@ -171,7 +186,7 @@ def compute_mri_from_resampled(df_med: pd.DataFrame):
     mom0 = df_med[TURB_MOM0_COL].to_numpy(dtype=float)
 
     H_pc = 182 + 16 * r_kpc
-    col_den = mom0 * 1.222e6 / 1.42 / 3600 * 1.823e18
+    col_den = mom0 * 1.222e6 / 1.42**2 / 3600 * 1.823e18
     num_den = col_den / (2 * H_pc * pc2cm / COSI)
     rho = num_den * 1.673e-24
 
@@ -186,10 +201,31 @@ def compute_mri_from_resampled(df_med: pd.DataFrame):
     return r_kpc, y_mri
 
 
-def draw_turb_band(
+def resolve_mri_profile_path(preferred_path):
+    if preferred_path is None:
+        return None
+    preferred = Path(preferred_path)
+    if preferred.exists():
+        return preferred
+    try:
+        matches_default = preferred.resolve() == DEFAULT_MRI_PROFILE.resolve()
+    except FileNotFoundError:
+        matches_default = preferred == DEFAULT_MRI_PROFILE
+    if not matches_default:
+        return preferred
+    if DEFAULT_ROHSA_MRI_PROFILE.exists():
+        print(
+            f"[EnergyBudget] MRI profile {preferred} missing; "
+            f"falling back to ROHSA profile {DEFAULT_ROHSA_MRI_PROFILE}."
+        )
+        return DEFAULT_ROHSA_MRI_PROFILE
+    return preferred
+
+
+def draw_turb_band_from_profiles(
     ax,
-    prof_max_path="../data/profile_resampled_max.tsv",
-    prof_min_path="../data/profile_resampled_min.tsv",
+    prof_max_path,
+    prof_min_path,
     turb_xlim=(5.0, 24.0),
     # style
     color=(0.6, 0.6, 0.6, 0.35),
@@ -262,6 +298,113 @@ def draw_turb_band(
     )
 
 
+def draw_turb_band_from_table(
+    ax,
+    turb_table_path,
+    turb_xlim=(5.0, 24.0),
+    color=(0.6, 0.6, 0.6, 0.35),
+    edgecolor=(0.1, 0.1, 0.1, 0.85),
+    linewidth=0.4,
+    zorder=-1000,
+    label=r"$\dot{e}_{\rm turb}$",
+    x_column=TURB_TABLE_XCOL,
+    low_column=TURB_TABLE_LO_COL,
+    high_column=TURB_TABLE_HI_COL,
+):
+    table_path = Path(turb_table_path)
+    if not table_path.exists():
+        print(f"[EnergyBudget] Turbulence table not found at {table_path}; skipping turbulence band.")
+        return None
+
+    df = pd.read_csv(table_path, sep=r"\t", engine="python")
+    missing = [column for column in (x_column, low_column, high_column) if column not in df.columns]
+    if missing:
+        raise KeyError(f"Missing turbulence columns in {table_path}: {missing}")
+
+    x = pd.to_numeric(df[x_column], errors="coerce").to_numpy(dtype=float)
+    y_lo = pd.to_numeric(df[low_column], errors="coerce").to_numpy(dtype=float)
+    y_hi = pd.to_numeric(df[high_column], errors="coerce").to_numpy(dtype=float)
+    mask = (
+        np.isfinite(x)
+        & np.isfinite(y_lo)
+        & np.isfinite(y_hi)
+        & (x >= turb_xlim[0])
+        & (x <= turb_xlim[1])
+        & (y_lo > 0.0)
+        & (y_hi > 0.0)
+    )
+    if not np.any(mask):
+        print(f"[EnergyBudget] No finite turbulence rows within {turb_xlim} in {table_path}.")
+        return None
+
+    x = x[mask]
+    y_lo = y_lo[mask]
+    y_hi = y_hi[mask]
+    order = np.argsort(x)
+    x = x[order]
+    y_lo = y_lo[order]
+    y_hi = y_hi[order]
+    print(
+        f"[EnergyBudget] Turbulence table source: {table_path} "
+        f"(rows used={x.size}, x={x.min():.3f}-{x.max():.3f} kpc)"
+    )
+    return ax.fill_between(
+        x,
+        y_lo,
+        y_hi,
+        color=color,
+        edgecolor=edgecolor,
+        linewidth=linewidth,
+        label=label,
+        zorder=zorder,
+    )
+
+
+def draw_turb_band(
+    ax,
+    turb_table_path=DEFAULT_TURB_TABLE,
+    prof_max_path=None,
+    prof_min_path=None,
+    turb_xlim=(5.0, 24.0),
+    color=(0.6, 0.6, 0.6, 0.35),
+    edgecolor=(0.1, 0.1, 0.1, 0.85),
+    linewidth=0.4,
+    zorder=-1000,
+    label=r"$\dot{e}_{\rm turb}$",
+    turb_join="intersect",
+    extrapolate_union=True,
+):
+    if turb_table_path is not None:
+        table_path = Path(turb_table_path)
+        if table_path.exists():
+            return draw_turb_band_from_table(
+                ax=ax,
+                turb_table_path=table_path,
+                turb_xlim=turb_xlim,
+                color=color,
+                edgecolor=edgecolor,
+                linewidth=linewidth,
+                zorder=zorder,
+                label=label,
+            )
+    if prof_max_path is not None and prof_min_path is not None:
+        return draw_turb_band_from_profiles(
+            ax=ax,
+            prof_max_path=prof_max_path,
+            prof_min_path=prof_min_path,
+            turb_xlim=turb_xlim,
+            color=color,
+            edgecolor=edgecolor,
+            linewidth=linewidth,
+            zorder=zorder,
+            label=label,
+            turb_join=turb_join,
+            extrapolate_union=extrapolate_union,
+        )
+    print("[EnergyBudget] No turbulence source available; skipping turbulence band.")
+    return None
+
+
 def _auto_vmin_vmax(vals, q_lo=0.02, q_hi=0.98):
     """Robust vmin/vmax from percentiles; falls back to finite min/max."""
     v = np.asarray(vals, dtype=float)
@@ -327,7 +470,8 @@ def _add_brinks_inset(
     if lim_x is None or lim_y is None:
         return
     face_base = marker_color if face_color is None else face_color
-    face_rgba = "none" if float(face_alpha) == 0 else mcolors.to_rgba(face_base, alpha=face_alpha)
+    face_fill_alpha = BRINKS_EDGE_ALPHA if float(face_alpha) == 0 else face_alpha
+    face_rgba = mcolors.to_rgba(face_base, alpha=face_fill_alpha)
     edge_base = edge_color if edge_color is not None else marker_color
     edge_rgba = mcolors.to_rgba(edge_base, alpha=edge_alpha)
 
@@ -339,7 +483,7 @@ def _add_brinks_inset(
         y_in,
         marker=marker_style,
         s=marker_size * 0.9,
-        facecolor=edge_rgba,
+        facecolor=face_rgba,
         edgecolor=edge_rgba,
         linewidths=marker_lw,
         zorder=12,
@@ -369,8 +513,9 @@ def plot_energy_budget_no_mri(
 
     # turbulence band input and style
     turb_xlim=(5.0, 24.0),
-    prof_max_path="../data/profile_resampled_max.tsv",
-    prof_min_path="../data/profile_resampled_min.tsv",
+    turb_table_path=DEFAULT_TURB_TABLE,
+    prof_max_path=None,
+    prof_min_path=None,
     turb_color=(0.6, 0.6, 0.6, 0.35),
     turb_edgecolor=(0.1, 0.1, 0.1, 0.85),
     turb_linewidth=0.4,
@@ -381,7 +526,7 @@ def plot_energy_budget_no_mri(
 
     # MRI (from resampled_med profile)
     mri_show=True,
-    mri_profile_path="../data/profile_resampled_med.tsv",
+    mri_profile_path=DEFAULT_MRI_PROFILE,
     mri_xlim=(4.0, 28.0),
     mri_mode="shade",           # 'shade' or 'line'
     mri_shade_color=(0.2, 0.9, 0.2, 0.26),
@@ -391,12 +536,12 @@ def plot_energy_budget_no_mri(
     mri_label=r"$\mathrm{MRI}$",
 
     # bubbles input
-    bubble_table_path="../code/1113.tab",
-    alpha_fits="../data/alpha-m31-jcomb_modHeader.fits",
-    r_fits="../data/r-m31-jcomb_modHeader.fits",
+    bubble_table_path=DEFAULT_BUBBLE_TABLE,
+    alpha_fits=DEFAULT_ALPHA_FITS,
+    r_fits=DEFAULT_R_FITS,
 
     # ring table and columns
-    ring_table_path="../code/1110.tab",
+    ring_table_path=DEFAULT_RING_TABLE,
     nring_column="n_HI_ring_cm-3",
 
     # continuous color map settings for n_ring
@@ -408,7 +553,7 @@ def plot_energy_budget_no_mri(
     colorbar_aspect=COLORBAR_ASPECT,
 
     # Brinks+86 comparison (grey dots)
-    brinks_table_path="../data/brinks+86/brinks86_combined.fwf",
+    brinks_table_path=DEFAULT_BRINKS_TABLE,
     brinks_show=True,
     brinks_marker_size=BRINKS_MARKER_SIZE,
     brinks_marker=BRINKS_MARKER,
@@ -418,6 +563,7 @@ def plot_energy_budget_no_mri(
     brinks_edge_color=BRINKS_EDGE_COLOR,
     brinks_edge_alpha=BRINKS_EDGE_ALPHA,
     brinks_marker_edge=BRINKS_EDGE_COLOR,
+    brinks_marker_edge_alpha=0.95,
     brinks_marker_lw=BRINKS_EDGE_LW,
     brinks_inset=True,
     brinks_inset_width=BRINKS_INSET_WIDTH,
@@ -472,6 +618,7 @@ def plot_energy_budget_no_mri(
 
     # output
     output_pdf="dot_e_balance.pdf",
+    panel_label="a",
     # figure and ticks
     figsize=FIGSIZE_MAIN,
     fig_dpi=FIG_DPI,
@@ -482,7 +629,8 @@ def plot_energy_budget_no_mri(
     tick_length_main=TICK_LENGTH_MAIN,
 ):
     """
-    Turbulence band from MAX and MIN resampled profiles.
+    Turbulence band from a merged ROHSA turbulence table when available.
+    Falls back to profile-based bounds only if explicit max/min profile paths are supplied.
     Optional MRI curve from median resampled profile.
     Bubbles are colored continuously by n_ring using a linear Normalize.
     n_ring from ring_table_path also enters dotE.
@@ -501,7 +649,8 @@ def plot_energy_budget_no_mri(
     ax.set_yscale("log")
     ax.set_xlabel(X_LABEL_MAIN)
     ax.set_ylabel(Y_LABEL_MAIN)
-    ax.text(0.02, 0.98, "a", transform=ax.transAxes, ha="left", va="top", fontsize=11, fontweight="bold")
+    if panel_label:
+        ax.text(0.02, 0.98, panel_label, transform=ax.transAxes, ha="left", va="top", fontsize=11, fontweight="bold")
     ax.tick_params(direction="in", which="both", length=tick_length_main, top=True, bottom=True, left=True, right=True)
     ax.xaxis.set_minor_formatter(mticker.ScalarFormatter())
     ax.yaxis.set_minor_locator(mticker.NullLocator())
@@ -509,6 +658,7 @@ def plot_energy_budget_no_mri(
     # Turbulence band
     turb_band = draw_turb_band(
         ax,
+        turb_table_path=turb_table_path,
         prof_max_path=prof_max_path,
         prof_min_path=prof_min_path,
         turb_xlim=turb_xlim,
@@ -685,13 +835,18 @@ def plot_energy_budget_no_mri(
     mri_handle = None
     if mri_show and mri_profile_path is not None:
         try:
-            df_med_mri = pd.read_csv(mri_profile_path, sep=r"\t", engine="python")
+            resolved_mri_profile = resolve_mri_profile_path(mri_profile_path)
+            df_med_mri = pd.read_csv(resolved_mri_profile, sep=r"\t", engine="python")
             x_mri_all, y_mri_all = compute_mri_from_resampled(df_med_mri)
             x_mri, y_mri = clip_xy(x_mri_all, y_mri_all, mri_xlim[0], mri_xlim[1])
             if x_mri.size:
+                print(
+                    f"[EnergyBudget] MRI profile source: {resolved_mri_profile} "
+                    f"(rows used={x_mri.size}, x={x_mri.min():.3f}-{x_mri.max():.3f} kpc)"
+                )
                 if mri_mode == "shade":
                     ybase = ax.get_ylim()[0]
-                    mri_handle = ax.fill_between(x_mri, ybase, y_mri, color=mri_shade_color, linewidth=0.0, zorder = 4)
+                    mri_handle = ax.fill_between(x_mri, ybase, y_mri, color=mri_shade_color, linewidth=0.0, zorder=10.5)
                 elif mri_mode == "line":
                     (mri_handle,) = ax.plot(
                         x_mri,
@@ -754,19 +909,20 @@ def plot_energy_budget_no_mri(
                     export_df.to_csv(export_path, index=False)
                     print(f"[EnergyBudget] Exported Brinks86 derived table to {export_path}")
                 if np.any(mask):
-                    base_color = brinks_marker_color if brinks_face_color is None else brinks_face_color
-                    face_rgba = "none" if float(brinks_face_alpha) == 0 else mcolors.to_rgba(base_color, alpha=brinks_face_alpha)
-                    edge_base = brinks_edge_color if brinks_edge_color is not None else brinks_marker_color
-                    edge_rgba = mcolors.to_rgba(edge_base, alpha=brinks_edge_alpha)
+                    fill_base = brinks_marker_color if brinks_face_color is None else brinks_face_color
+                    fill_alpha = brinks_edge_alpha if float(brinks_face_alpha) == 0 else brinks_face_alpha
+                    face_rgba = mcolors.to_rgba(fill_base, alpha=fill_alpha)
+                    edge_base = brinks_marker_edge if brinks_marker_edge is not None else "white"
+                    edge_rgba = mcolors.to_rgba(edge_base, alpha=brinks_marker_edge_alpha)
                     brinks_handle = ax.scatter(
                         br_r[mask],
                         dotE_scaled[mask],
                         s=brinks_marker_size,
                         marker=brinks_marker,
-                        facecolors=edge_rgba,
+                        facecolors=face_rgba,
                         edgecolors=edge_rgba,
                         linewidths=max(brinks_marker_lw, 0.0),
-                        zorder=3,
+                        zorder=10,
                         label="Brinks+86",
                     )
                 else:
@@ -782,9 +938,9 @@ def plot_energy_budget_no_mri(
             marker_color=brinks_marker_color,
             face_color=brinks_face_color,
             face_alpha=brinks_face_alpha,
-            edge_color=brinks_edge_color,
-            edge_alpha=brinks_edge_alpha,
-            marker_lw=max(brinks_marker_lw, 0.8),
+            edge_color=brinks_marker_edge,
+            edge_alpha=brinks_marker_edge_alpha,
+            marker_lw=brinks_marker_lw,
             inset_width=brinks_inset_width,
             inset_height=brinks_inset_height,
             inset_loc=brinks_inset_loc,
@@ -859,9 +1015,12 @@ def plot_energy_budget_no_mri(
             leg.get_frame().set_edgecolor(legend_edgecolor)
             leg.get_frame().set_alpha(legend_framealpha)
             leg.get_frame().set_linewidth(legend_edge_lw)
+        leg.set_zorder(100)
 
     plt.tight_layout()
-    plt.savefig(output_pdf)
+    output_path = Path(output_pdf)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(output_path)
     plt.close()
 
 
@@ -876,18 +1035,19 @@ if __name__ == "__main__":
 
         # turbulence band
         turb_xlim=(3, 33),
-        prof_max_path="../data/profile_resampled_max.tsv",
-        prof_min_path="../data/profile_resampled_min.tsv",
-        turb_color=(0.6, 0.6, 0.6, 0.45),
-        turb_edgecolor=(0.1, 0.1, 0.1, 0.85),
+        turb_table_path=DEFAULT_TURB_TABLE,
+        prof_max_path=REPO_ROOT / "data" / "profile_resampled_max.tsv",
+        prof_min_path=REPO_ROOT / "data" / "profile_resampled_min.tsv",
+        turb_color=(0.12, 0.12, 0.12, 0.35),
+        turb_edgecolor=(0.0, 0.0, 0.0, 0.0),
         turb_linewidth=0.0,
-        turb_zorder=-1000,
+        turb_zorder=10.25,
         turb_join="intersect",
         turb_extrapolate_union=True,
 
         # MRI from resampled_med
         mri_show=True,
-        mri_profile_path="../data/profile_resampled_med.tsv",
+        mri_profile_path=DEFAULT_MRI_PROFILE,
         mri_xlim=(3, 33),
         mri_mode="shade",
         mri_shade_color=(0.7, 0.9, 0.7, 1),
@@ -897,10 +1057,10 @@ if __name__ == "__main__":
         mri_label=r"$\mathrm{MRI}$",
 
         # bubbles and ring table
-        bubble_table_path="../code/1113.tab",
-        alpha_fits="../data/alpha-m31-jcomb_modHeader.fits",
-        r_fits="../data/r-m31-jcomb_modHeader.fits",
-        ring_table_path="../code/1113.tab",
+        bubble_table_path=DEFAULT_BUBBLE_TABLE,
+        alpha_fits=DEFAULT_ALPHA_FITS,
+        r_fits=DEFAULT_R_FITS,
+        ring_table_path=DEFAULT_RING_TABLE,
         nring_column="n_HI_ring_cm-3",
 
         # continuous coloring by n_ring (auto vmin/vmax)
@@ -915,12 +1075,12 @@ if __name__ == "__main__":
         bubble_marker_size=BUBBLE_MARKER_SIZE,
         bubble_marker=BUBBLE_MARKER,
         bubble_base_face_color=BUBBLE_BASE_FACE_COLOR,
-        bubble_marker_face_alpha=BUBBLE_FACE_ALPHA,
+        bubble_marker_face_alpha=0.55,
         bubble_use_data_edgecolor=False,
-        bubble_marker_edge_color=BUBBLE_EDGE_COLOR,
-        bubble_marker_edge_alpha=BUBBLE_EDGE_ALPHA,
-        bubble_marker_edge_lw=BUBBLE_EDGE_LW,
-        bubble_marker_zorder=6,
+        bubble_marker_edge_color="white",
+        bubble_marker_edge_alpha=1.0,
+        bubble_marker_edge_lw=0.45,
+        bubble_marker_zorder=11,
         bubble_show_errorbar=BUBBLE_SHOW_ERRORBAR,
         bubble_errorbar_use_data_color=BUBBLE_ERRORBAR_USE_DATA_COLOR,
         bubble_errorbar_data_alpha=BUBBLE_ERRORBAR_DATA_ALPHA,
@@ -928,6 +1088,12 @@ if __name__ == "__main__":
         bubble_errorbar_capsize=BUBBLE_ERRORBAR_CAPSIZE,
         bubble_errorbar_linestyle=BUBBLE_ERRORBAR_LINESTYLE,
         bubble_errorbar_zorder=BUBBLE_ERRORBAR_ZORDER,
+
+        brinks_table_path=DEFAULT_BRINKS_TABLE,
+        brinks_face_alpha=0.55,
+        brinks_marker_edge="white",
+        brinks_marker_edge_alpha=1.0,
+        brinks_marker_lw=0.45,
 
         # legend
         show_legend=True,
@@ -938,5 +1104,5 @@ if __name__ == "__main__":
         legend_edgecolor="black",
 
         # output
-        output_pdf="dot_e_balance.pdf",
+        output_pdf=REPO_ROOT / "plot" / "dot_e_balance.pdf",
     )

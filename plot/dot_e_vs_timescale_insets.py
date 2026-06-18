@@ -13,18 +13,34 @@ Brinks+86:
 
 Inputs
 ------
-- bubble_table_path : ../code/1113.tab
-- ring_table_path   : ../code/1113.tab (for n_HI_ring_cm-3 used in bubble dotE)
-- alpha_fits        : ../data/alpha-m31-jcomb_modHeader.fits
-- r_fits            : ../data/r-m31-jcomb_modHeader.fits  (for R_kpc coloring)
-- brinks_table_path : ../data/brinks+86/brinks86_combined.fwf
+- bubble_table_path : code/m31_bubble_catalog_final_yes_118.tab
+- ring_table_path   : code/m31_bubble_catalog_final_yes_118.tab (for n_HI_ring_cm-3 used in bubble dotE)
+- alpha_fits        : data/alpha-m31-jcomb_modHeader.fits
+- r_fits            : data/r-m31-jcomb_modHeader.fits  (for R_kpc coloring)
+- brinks_table_path : data/brinks+86/brinks86_combined.fwf
 
 Output
 ------
-- dot_e_vs_timescale_insets.pdf (by default)
+- runs/checks/bubbleturbpub_panel_d/dot_e_vs_timescale_insets.pdf (by default)
 """
 
 from __future__ import annotations
+
+import os
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+LOCAL_DIR = REPO_ROOT / ".local"
+MPL_DIR = LOCAL_DIR / "matplotlib"
+CACHE_DIR = LOCAL_DIR / "cache"
+FONTCONFIG_DIR = CACHE_DIR / "fontconfig"
+for directory in (MPL_DIR, CACHE_DIR, FONTCONFIG_DIR):
+    directory.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("MPLCONFIGDIR", str(MPL_DIR))
+os.environ.setdefault("XDG_CACHE_HOME", str(CACHE_DIR))
+os.environ.setdefault("FONTCONFIG_PATH", "/opt/homebrew/etc/fonts")
+os.environ.setdefault("FONTCONFIG_FILE", "/opt/homebrew/etc/fonts/fonts.conf")
+os.environ.setdefault("FONTCONFIG_CACHE", str(FONTCONFIG_DIR))
 
 import numpy as np
 import pandas as pd
@@ -35,11 +51,16 @@ from matplotlib import ticker as mticker
 from matplotlib.colors import Normalize
 from matplotlib import colors as mcolors
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-from pathlib import Path
 
 pc2cm = 3e18
 SEC_PER_MYR = 1e6 * 3.154e7
 COSI = np.cos(np.deg2rad(77.0))
+DEFAULT_BUBBLE_TABLE = REPO_ROOT / "catalog" / "working" / "m31_bubble_catalog_final_yes_118.tab"
+DEFAULT_RING_TABLE = REPO_ROOT / "catalog" / "working" / "m31_bubble_catalog_final_yes_118.tab"
+DEFAULT_ALPHA_FITS = REPO_ROOT / "data" / "alpha-m31-jcomb_modHeader.fits"
+DEFAULT_R_FITS = REPO_ROOT / "data" / "r-m31-jcomb_modHeader.fits"
+DEFAULT_BRINKS_TABLE = REPO_ROOT / "data" / "brinks+86" / "brinks86_combined.fwf"
+DEFAULT_OUTPUT = REPO_ROOT / "plot" / "dot_e_vs_timescale_insets.pdf"
 
 FIG_DPI = 100
 SAVEFIG_DPI = 100
@@ -69,19 +90,19 @@ Y_LABEL_MAIN = r"$\dot{e}_{\rm bubble}$ [$10^{-28}$ erg cm$^{-3}$ s$^{-1}$]"
 BUBBLE_MARKER_SIZE = 65
 BUBBLE_MARKER = "o"
 BUBBLE_BASE_FACE_COLOR = (0.9, 0.4, 0.4)  # match rv diagram red
-BUBBLE_FACE_ALPHA = 0.7
-BUBBLE_EDGE_ALPHA = 0
-BUBBLE_EDGE_LW = 0
-BUBBLE_EDGE_COLOR = (0.9, 0.2, 0.2)
+BUBBLE_FACE_ALPHA = 0.55
+BUBBLE_EDGE_ALPHA = 1.0
+BUBBLE_EDGE_LW = 0.45
+BUBBLE_EDGE_COLOR = "white"
 
 BRINKS_MARKER_SIZE = 45
 BRINKS_MARKER = "^"
 BRINKS_MARKER_COLOR = (0.6, 0.6, 0.9)
-BRINKS_MARKER_LW = 0
+BRINKS_MARKER_LW = 0.45
 BRINKS_FACE_COLOR = None  # if None, uses BRINKS_MARKER_COLOR
-BRINKS_FACE_ALPHA = 0.0
-BRINKS_EDGE_ALPHA = 0.6
-BRINKS_EDGE_COLOR = (0.6, 0.6, 0.9)
+BRINKS_FACE_ALPHA = 0.55
+BRINKS_EDGE_ALPHA = 1.0
+BRINKS_EDGE_COLOR = "white"
 BRINKS_ENERGY_SCALE = 0.44
 LEGEND_LABEL_BRINKS = "Brinks+86"
 MODEL_LABEL_TEMPLATE = r"model ($n_0={n0}$ cm$^{{-3}}$)"
@@ -222,6 +243,8 @@ def _add_brinks_insets(
     iax = inset_axes(ax, width=inset_size, height=inset_size, loc="upper right", borderpad=inset_borderpad)
     iax.set_xscale("log")
     iax.set_yscale("log")
+    face_base = marker_color if marker_face_color is None else marker_face_color
+    face_rgba = mcolors.to_rgba(face_base, alpha=marker_face_alpha)
     edge_base = marker_color if marker_edge_color is None else marker_edge_color
     edge_rgba = mcolors.to_rgba(edge_base, alpha=marker_edge_alpha)
     iax.scatter(
@@ -229,9 +252,9 @@ def _add_brinks_insets(
         yvals[mask_finite],
         marker=marker_style,
         s=marker_size * 0.9,
-        facecolor=edge_rgba,
+        facecolor=face_rgba,
         edgecolor=edge_rgba,
-        linewidths=max(marker_lw, 0.8),
+        linewidths=marker_lw,
         zorder=12,
     )
     iax.set_xlim(limits_x)
@@ -268,10 +291,10 @@ def plot_dot_e_vs_timescale(
     tick_length_inset=TICK_LENGTH_INSET,
     xlim=[1,100],
     ylim=[5e-2,1e4],
-    bubble_table_path="../code/1113.tab",
-    ring_table_path="../code/1113.tab",
-    alpha_fits="../data/alpha-m31-jcomb_modHeader.fits",
-    r_fits="../data/r-m31-jcomb_modHeader.fits",
+    bubble_table_path=DEFAULT_BUBBLE_TABLE,
+    ring_table_path=DEFAULT_RING_TABLE,
+    alpha_fits=DEFAULT_ALPHA_FITS,
+    r_fits=DEFAULT_R_FITS,
     nring_column="n_HI_ring_cm-3",
     # coloring
     color_by_radius=False,
@@ -288,7 +311,7 @@ def plot_dot_e_vs_timescale(
     bubble_marker_edge_lw=BUBBLE_EDGE_LW,
     bubble_marker_edge_color=BUBBLE_EDGE_COLOR,
     # Brinks overlay
-    brinks_table_path="../data/brinks+86/brinks86_combined.fwf",
+    brinks_table_path=DEFAULT_BRINKS_TABLE,
     brinks_show=True,
     brinks_marker_size=BRINKS_MARKER_SIZE,
     brinks_marker=BRINKS_MARKER,
@@ -310,7 +333,8 @@ def plot_dot_e_vs_timescale(
     export_table=False,
     export_path="dot_e_vs_timescale.csv",
     # output
-    output_pdf="dot_e_vs_timescale_insets.pdf",
+    output_pdf=DEFAULT_OUTPUT,
+    panel_label="b",
     # inset settings
     brinks_insets=True,
     # fonts and ticks
@@ -332,6 +356,9 @@ def plot_dot_e_vs_timescale(
     # model line styling
     model_alpha=MODEL_ALPHA,
 ):
+    output_pdf = Path(output_pdf)
+    output_pdf.parent.mkdir(parents=True, exist_ok=True)
+
     plt.rcParams.update({
         "figure.dpi": fig_dpi,
         "savefig.dpi": savefig_dpi,
@@ -345,7 +372,8 @@ def plot_dot_e_vs_timescale(
     ax.set_yscale("log")
     ax.set_xlabel(X_LABEL_MAIN)
     ax.set_ylabel(Y_LABEL_MAIN)
-    ax.text(0.02, 0.98, "d", transform=ax.transAxes, ha="left", va="top", fontsize=11, fontweight="bold")
+    if panel_label:
+        ax.text(0.02, 0.98, panel_label, transform=ax.transAxes, ha="left", va="top", fontsize=11, fontweight="bold")
     ax.tick_params(direction="in", which="both", length=tick_length_main, top=True, right=True)
     ax.xaxis.set_major_locator(mticker.LogLocator(base=10, numticks=6))
     ax.yaxis.set_major_locator(mticker.LogLocator(base=10, numticks=6))
@@ -376,13 +404,21 @@ def plot_dot_e_vs_timescale(
 
         colors = np.array([cmap(norm(v)) if np.isfinite(v) else (0.5, 0.5, 0.5, 0.3) for v in r_kpc_vals])
         facecolors = np.stack([np.r_[c[:3], bubble_marker_face_alpha] for c in colors])
-        edgecolors = None
+        edgecolors = np.repeat(
+            np.array(mcolors.to_rgba(bubble_marker_edge_color, alpha=bubble_marker_edge_alpha))[None, :],
+            len(r_kpc_vals),
+            axis=0,
+        )
     else:
         norm = None
         face_base = plt.get_cmap(cmap_name)(0.6)[:3] if bubble_base_face_color is None else mcolors.to_rgba(bubble_base_face_color)[:3]
         base_face = np.r_[face_base, bubble_marker_face_alpha]
         facecolors = np.repeat(base_face[None, :], len(r_kpc_vals), axis=0)
-        edgecolors = None
+        edgecolors = np.repeat(
+            np.array(mcolors.to_rgba(bubble_marker_edge_color, alpha=bubble_marker_edge_alpha))[None, :],
+            len(r_kpc_vals),
+            axis=0,
+        )
 
     mask = np.isfinite(bubble["t_exp_myr"]) & np.isfinite(bubble["dotE"])
     ax.scatter(
@@ -391,8 +427,8 @@ def plot_dot_e_vs_timescale(
         s=bubble_marker_size,
         marker=bubble_marker,
         facecolor=facecolors[mask],
-        edgecolor="none",
-        linewidths=0,
+        edgecolor=edgecolors[mask],
+        linewidths=bubble_marker_edge_lw,
         zorder=5,
     )
 
@@ -426,6 +462,8 @@ def plot_dot_e_vs_timescale(
                 brinks_age_myr = age_myr
                 brinks_dote_scaled = dote_scaled
                 if np.any(mb):
+                    face_base = brinks_marker_color if brinks_face_color is None else brinks_face_color
+                    face_rgba = mcolors.to_rgba(face_base, alpha=brinks_marker_face_alpha)
                     edge_base = brinks_marker_edge_color if brinks_marker_edge_color is not None else brinks_marker_color
                     edge_rgba = mcolors.to_rgba(edge_base, alpha=brinks_marker_edge_alpha)
                     brinks_handle = ax.scatter(
@@ -433,9 +471,9 @@ def plot_dot_e_vs_timescale(
                         dote_scaled[mb],
                         marker=brinks_marker,
                         s=brinks_marker_size,
-                        facecolor=edge_rgba,
+                        facecolor=face_rgba,
                         edgecolor=edge_rgba,
-                        linewidths=max(brinks_marker_lw, 0.8),
+                        linewidths=brinks_marker_lw,
                         zorder=12,
                         label=LEGEND_LABEL_BRINKS,
                     )
@@ -521,9 +559,9 @@ def plot_dot_e_vs_timescale(
     bubble_sample = Line2D(
         [], [], marker=bubble_marker, linestyle="None",
         markersize=np.sqrt(bubble_marker_size),
-        markerfacecolor=mcolors.to_rgba(BUBBLE_BASE_FACE_COLOR),
-        markeredgecolor=mcolors.to_rgba(BUBBLE_EDGE_COLOR),
-        markeredgewidth=BUBBLE_EDGE_LW,
+        markerfacecolor=mcolors.to_rgba(BUBBLE_BASE_FACE_COLOR, alpha=bubble_marker_face_alpha),
+        markeredgecolor=mcolors.to_rgba(bubble_marker_edge_color, alpha=bubble_marker_edge_alpha),
+        markeredgewidth=bubble_marker_edge_lw,
         label=LEGEND_LABEL_BUBBLES,
     )
     final_handles.append(bubble_sample)

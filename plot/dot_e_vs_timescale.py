@@ -13,8 +13,8 @@ Brinks+86:
 
 Inputs
 ------
-- bubble_table_path : ../code/1113.tab
-- ring_table_path   : ../code/1113.tab (for n_HI_ring_cm-3 used in bubble dotE)
+- bubble_table_path : ../code/m31_bubble_catalog_final_yes_118.tab
+- ring_table_path   : ../code/m31_bubble_catalog_final_yes_118.tab (for n_HI_ring_cm-3 used in bubble dotE)
 - alpha_fits        : ../data/alpha-m31-jcomb_modHeader.fits
 - r_fits            : ../data/r-m31-jcomb_modHeader.fits  (for R_kpc coloring)
 - brinks_table_path : ../data/brinks+86/brinks86_combined.fwf
@@ -106,8 +106,8 @@ def _auto_vmin_vmax(vals, q_lo=0.02, q_hi=0.98):
 def plot_dot_e_vs_timescale(
     xlim=[1,60],
     ylim=[5e-2,1e3],
-    bubble_table_path="../code/1113.tab",
-    ring_table_path="../code/1113.tab",
+    bubble_table_path="../code/m31_bubble_catalog_final_yes_118.tab",
+    ring_table_path="../code/m31_bubble_catalog_final_yes_118.tab",
     alpha_fits="../data/alpha-m31-jcomb_modHeader.fits",
     r_fits="../data/r-m31-jcomb_modHeader.fits",
     nring_column="n_HI_ring_cm-3",

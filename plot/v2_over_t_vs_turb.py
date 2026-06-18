@@ -13,8 +13,8 @@ Definitions (cgs)
 
 Inputs
 ------
-- bubble_table_path : ../code/1113.tab (fixed-width; uses expansion_vel, radius_pc, ra_pix, dec_pix)
-- ring_table_path   : ../code/1113.tab (only used to fetch n_ring if you add color; not required here)
+- bubble_table_path : ../code/m31_bubble_catalog_final_yes_118.tab (fixed-width; uses expansion_vel, radius_pc, ra_pix, dec_pix)
+- ring_table_path   : ../code/m31_bubble_catalog_final_yes_118.tab (only used to fetch n_ring if you add color; not required here)
 - alpha_fits        : ../data/alpha-m31-jcomb_modHeader.fits (for alignment; radius map sampling)
 - r_fits            : ../data/r-m31-jcomb_modHeader.fits (pc, for R_kpc coloring)
 - prof_max_path     : ../data/profile_resampled_max.tsv (columns r, x1_mom0, x1_mom2)
@@ -421,8 +421,8 @@ def _add_hist_inset(
 def plot_v2_over_t_vs_turb(
     xlim=XLIM_MAIN,
     ylim=YLIM_MAIN,
-    bubble_table_path="../code/1113.tab",
-    ring_table_path="../code/1113.tab",  # kept for interface symmetry; not used directly
+    bubble_table_path="../code/m31_bubble_catalog_final_yes_118.tab",
+    ring_table_path="../code/m31_bubble_catalog_final_yes_118.tab",  # kept for interface symmetry; not used directly
     alpha_fits="../data/alpha-m31-jcomb_modHeader.fits",
     r_fits="../data/r-m31-jcomb_modHeader.fits",
     prof_max_path="../data/profile_resampled_max.tsv",

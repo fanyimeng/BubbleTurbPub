@@ -1,29 +1,44 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
+r"""
 Energy budget analog using velocity-squared over dissipation time.
 
 This plot mirrors dot_e_balance.py but replaces $\dot{e}$ with
-$v_{\rm exp}^2/t_{\rm exp}$ (bubbles) and $\sigma^2/\tau_{\rm diss}$ (turbulence),
-both in $(\mathrm{km\,s^{-1}})^2$ Myr$^{-1}$. MRI is omitted because this metric
-is not defined for the MRI curve.
+$\frac{1}{2}v_{\rm exp}^2/t_{\rm exp}$ (bubbles) and
+$\frac{3}{2}\sigma^2/\tau_{\rm diss}$ (turbulence), both in
+$(\mathrm{km\,s^{-1}})^2$ Myr$^{-1}$. MRI is omitted because this metric is not
+defined for the MRI curve.
 
 Inputs
 ------
-- Bubble table: ../code/1113.tab (fixed-width; uses expansion_vel, radius_pc, ra_pix, dec_pix).
-- Ring table: ../code/1113.tab (for n_ring coloring; optional).
-- Alpha / R FITS: ../data/alpha-m31-jcomb_modHeader.fits, ../data/r-m31-jcomb_modHeader.fits.
-- Turbulence profiles: ../data/profile_resampled_max.tsv and ../data/profile_resampled_min.tsv
-  with columns r, x1_mom0, x1_mom2.
+- Bubble table: code/m31_bubble_catalog_final_yes_118.tab (fixed-width; uses expansion_vel, radius_pc, ra_pix, dec_pix).
+- Ring table: code/m31_bubble_catalog_final_yes_118.tab (for n_ring coloring; optional).
+- Alpha / R FITS: data/alpha-m31-jcomb_modHeader.fits, data/r-m31-jcomb_modHeader.fits.
+- ROHSA turbulence table: runs/checks/rohsa_compare/panel_a_rohsa_turbulence/merged_sampling_profile.tsv
+  with the same radial blocks as panel a and v2t_p16/v2t_p84 band columns.
 
 Output
 ------
-- v2_over_t_balance.pdf (or the name you pass in).
+- runs/checks/bubbleturbpub_panel_b/v2_over_t_balance.pdf (or the name you pass in).
 """
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+LOCAL_DIR = REPO_ROOT / ".local"
+MPL_DIR = LOCAL_DIR / "matplotlib"
+CACHE_DIR = LOCAL_DIR / "cache"
+FONTCONFIG_DIR = CACHE_DIR / "fontconfig"
+for directory in (MPL_DIR, CACHE_DIR, FONTCONFIG_DIR):
+    directory.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("MPLCONFIGDIR", str(MPL_DIR))
+os.environ.setdefault("XDG_CACHE_HOME", str(CACHE_DIR))
+os.environ.setdefault("FONTCONFIG_PATH", "/opt/homebrew/etc/fonts")
+os.environ.setdefault("FONTCONFIG_FILE", "/opt/homebrew/etc/fonts/fonts.conf")
+os.environ.setdefault("FONTCONFIG_CACHE", str(FONTCONFIG_DIR))
 
 import numpy as np
 import pandas as pd
@@ -41,8 +56,21 @@ PC2CM = 3e18
 SEC_PER_MYR = 1e6 * 3.154e7
 COSI = np.cos(np.deg2rad(77.0))
 
+DEFAULT_PROF_MAX = REPO_ROOT / "data" / "profile_resampled_max.tsv"
+DEFAULT_PROF_MIN = REPO_ROOT / "data" / "profile_resampled_min.tsv"
+DEFAULT_BUBBLE_TABLE = REPO_ROOT / "catalog" / "working" / "m31_bubble_catalog_final_yes_118.tab"
+DEFAULT_ALPHA_FITS = REPO_ROOT / "data" / "alpha-m31-jcomb_modHeader.fits"
+DEFAULT_R_FITS = REPO_ROOT / "data" / "r-m31-jcomb_modHeader.fits"
+DEFAULT_RING_TABLE = REPO_ROOT / "catalog" / "working" / "m31_bubble_catalog_final_yes_118.tab"
+DEFAULT_BRINKS_TABLE = REPO_ROOT / "data" / "brinks+86" / "brinks86_combined.fwf"
+DEFAULT_OUTPUT = REPO_ROOT / "runs" / "checks" / "bubbleturbpub_panel_b" / "v2_over_t_balance.pdf"
+DEFAULT_TURB_TABLE = REPO_ROOT / "runs" / "checks" / "rohsa_compare" / "panel_a_rohsa_turbulence" / "merged_sampling_profile.tsv"
+
 TURB_MOM0_COL = "x1_mom0"
 TURB_MOM2_COL = "x1_mom2"
+TURB_TABLE_XCOL = "r_center_kpc"
+TURB_TABLE_LO_COL = "v2t_p16_km2_s2_myr"
+TURB_TABLE_HI_COL = "v2t_p84_km2_s2_myr"
 
 CM_METRIC_TO_KM_MYR = SEC_PER_MYR * 1e-10  # convert cm^2 s^-3 to (km/s)^2 Myr^-1
 
@@ -70,7 +98,7 @@ BUBBLE_LEGEND_EDGE_LW = 0.5
 BUBBLE_LEGEND_ORDER = ("bubbles", "brinks", "turbulence")
 
 BUBBLE_SHOW_BRINKS_DEFAULT = True
-BRINKS_TABLE_PATH_DEFAULT = "../data/brinks+86/brinks86_combined.fwf"
+BRINKS_TABLE_PATH_DEFAULT = DEFAULT_BRINKS_TABLE
 BRINKS_MARKER = "^"
 BRINKS_MARKER_SIZE = 55
 BRINKS_FACE_COLOR = None
@@ -97,9 +125,9 @@ BUBBLE_ERRORBAR_LINESTYLE = "-"
 BUBBLE_ERRORBAR_ZORDER = 5
 
 X_LABEL_MAIN = "Distance to M31's center: $R$ [kpc]"
-Y_LABEL_MAIN = r"$v_{\rm exp}^2/t_{\rm exp}$ or $\sigma^2/\tau_{\rm diss}$ [$(\mathrm{km\,s^{-1}})^2$ Myr$^{-1}$]"
+Y_LABEL_MAIN = r"$\frac{1}{2}v_{\rm exp}^2/t_{\rm exp}$ or $\frac{3}{2}\sigma^2/\tau_{\rm diss}$ [$(\mathrm{km\,s^{-1}})^2$ Myr$^{-1}$]"
 LEGEND_LABEL_BUBBLES = "New Bubbles"
-LEGEND_LABEL_TURB = "Turbulence" #r"$\sigma^2/\tau_{\rm diss}$"
+LEGEND_LABEL_TURB = "Turbulence"
 
 
 # -----------------------
@@ -179,14 +207,14 @@ def compute_turb_metric(df: pd.DataFrame, branch: str):
 
 def draw_turb_band_metric(
     ax,
-    prof_max_path="../data/profile_resampled_max.tsv",
-    prof_min_path="../data/profile_resampled_min.tsv",
+    prof_max_path=DEFAULT_PROF_MAX,
+    prof_min_path=DEFAULT_PROF_MIN,
     turb_xlim=(5.0, 24.0),
     color=(0.6, 0.6, 0.6, 0.35),
     edgecolor=(0.1, 0.1, 0.1, 0.85),
     linewidth=0.4,
     zorder=-1000,
-    label=r"$\sigma^2/\tau_{\rm diss}$",
+    label=r"$\frac{3}{2}\sigma^2/\tau_{\rm diss}$",
     turb_join="intersect",
     extrapolate_union=True,
 ):
@@ -250,6 +278,113 @@ def draw_turb_band_metric(
     )
 
 
+def draw_turb_band_from_table(
+    ax,
+    turb_table_path,
+    turb_xlim=(5.0, 24.0),
+    color=(0.6, 0.6, 0.6, 0.35),
+    edgecolor=(0.1, 0.1, 0.1, 0.85),
+    linewidth=0.4,
+    zorder=-1000,
+    label=r"$\frac{3}{2}\sigma^2/\tau_{\rm diss}$",
+    x_column=TURB_TABLE_XCOL,
+    low_column=TURB_TABLE_LO_COL,
+    high_column=TURB_TABLE_HI_COL,
+):
+    table_path = Path(turb_table_path)
+    if not table_path.exists():
+        print(f"[v2/t] ROHSA turbulence table not found at {table_path}; skipping turbulence band.")
+        return None
+
+    df = pd.read_csv(table_path, sep=r"\t", engine="python")
+    missing = [column for column in (x_column, low_column, high_column) if column not in df.columns]
+    if missing:
+        raise KeyError(f"Missing ROHSA turbulence columns in {table_path}: {missing}")
+
+    x = pd.to_numeric(df[x_column], errors="coerce").to_numpy(dtype=float)
+    y_lo = pd.to_numeric(df[low_column], errors="coerce").to_numpy(dtype=float)
+    y_hi = pd.to_numeric(df[high_column], errors="coerce").to_numpy(dtype=float)
+    mask = (
+        np.isfinite(x)
+        & np.isfinite(y_lo)
+        & np.isfinite(y_hi)
+        & (x >= turb_xlim[0])
+        & (x <= turb_xlim[1])
+        & (y_lo > 0.0)
+        & (y_hi > 0.0)
+    )
+    if not np.any(mask):
+        print(f"[v2/t] No finite ROHSA turbulence rows within {turb_xlim} in {table_path}.")
+        return None
+
+    x = x[mask]
+    y_lo = y_lo[mask]
+    y_hi = y_hi[mask]
+    order = np.argsort(x)
+    x = x[order]
+    y_lo = y_lo[order]
+    y_hi = y_hi[order]
+    print(
+        f"[v2/t] ROHSA turbulence table source: {table_path} "
+        f"(rows used={x.size}, x={x.min():.3f}-{x.max():.3f} kpc)"
+    )
+    return ax.fill_between(
+        x,
+        y_lo,
+        y_hi,
+        color=color,
+        edgecolor=edgecolor,
+        linewidth=linewidth,
+        label=label,
+        zorder=zorder,
+    )
+
+
+def draw_turb_band(
+    ax,
+    turb_table_path=DEFAULT_TURB_TABLE,
+    prof_max_path=None,
+    prof_min_path=None,
+    turb_xlim=(5.0, 24.0),
+    color=(0.6, 0.6, 0.6, 0.35),
+    edgecolor=(0.1, 0.1, 0.1, 0.85),
+    linewidth=0.4,
+    zorder=-1000,
+    label=r"$\frac{3}{2}\sigma^2/\tau_{\rm diss}$",
+    turb_join="intersect",
+    extrapolate_union=True,
+):
+    if turb_table_path is not None:
+        table_path = Path(turb_table_path)
+        if table_path.exists():
+            return draw_turb_band_from_table(
+                ax=ax,
+                turb_table_path=table_path,
+                turb_xlim=turb_xlim,
+                color=color,
+                edgecolor=edgecolor,
+                linewidth=linewidth,
+                zorder=zorder,
+                label=label,
+            )
+    if prof_max_path is not None and prof_min_path is not None:
+        return draw_turb_band_metric(
+            ax=ax,
+            prof_max_path=prof_max_path,
+            prof_min_path=prof_min_path,
+            turb_xlim=turb_xlim,
+            color=color,
+            edgecolor=edgecolor,
+            linewidth=linewidth,
+            zorder=zorder,
+            label=label,
+            turb_join=turb_join,
+            extrapolate_union=extrapolate_union,
+        )
+    print("[v2/t] No turbulence source available; skipping turbulence band.")
+    return None
+
+
 # -----------------------
 # Main plotting function
 # -----------------------
@@ -260,23 +395,24 @@ def plot_v2_over_t_balance(
 
     # turbulence band input and style
     turb_xlim=(5.0, 24.0),
-    prof_max_path="../data/profile_resampled_max.tsv",
-    prof_min_path="../data/profile_resampled_min.tsv",
+    turb_table_path=DEFAULT_TURB_TABLE,
+    prof_max_path=None,
+    prof_min_path=None,
     turb_color=(0.6, 0.6, 0.6, 0.35),
     turb_edgecolor=(0.1, 0.1, 0.1, 0.85),
     turb_linewidth=0.4,
     turb_zorder=-1000,
-    turb_label=r"$\sigma^2/\tau_{\rm diss}$",
+    turb_label=r"$\frac{3}{2}\sigma^2/\tau_{\rm diss}$",
     turb_join="intersect",
     turb_extrapolate_union=True,
 
     # bubbles input
-    bubble_table_path="../code/1113.tab",
-    alpha_fits="../data/alpha-m31-jcomb_modHeader.fits",
-    r_fits="../data/r-m31-jcomb_modHeader.fits",
+    bubble_table_path=DEFAULT_BUBBLE_TABLE,
+    alpha_fits=DEFAULT_ALPHA_FITS,
+    r_fits=DEFAULT_R_FITS,
 
     # ring table and columns (for color)
-    ring_table_path="../code/1113.tab",
+    ring_table_path=DEFAULT_RING_TABLE,
     nring_column="n_HI_ring_cm-3",
 
     # continuous color map settings for n_ring
@@ -338,7 +474,7 @@ def plot_v2_over_t_balance(
     brinks_label=BRINKS_LABEL,
 
     # output
-    output_pdf="v2_over_t_balance.pdf",
+    output_pdf=DEFAULT_OUTPUT,
     # figure and ticks
     figsize=FIGSIZE_MAIN,
     fig_dpi=FIG_DPI,
@@ -381,8 +517,9 @@ def plot_v2_over_t_balance(
     ax.yaxis.set_minor_locator(mticker.NullLocator())
 
     # Turbulence band
-    turb_band = draw_turb_band_metric(
+    turb_band = draw_turb_band(
         ax,
+        turb_table_path=turb_table_path,
         prof_max_path=prof_max_path,
         prof_min_path=prof_min_path,
         turb_xlim=turb_xlim,
@@ -405,11 +542,11 @@ def plot_v2_over_t_balance(
     angles = get_fits_at_pix(alpha_fits, ra_pix, dec_pix) - 90.0
     x_pos = get_fits_at_pix(r_fits, ra_pix, dec_pix) / 1e3  # kpc
 
-    # v^2 / t_exp for bubbles
+    # 0.5 v^2 / t_exp for bubbles
     vexp_cms = vexp_kms * 1e5
     t_exp = 0.6 * r_bub_pc * PC2CM / vexp_cms
     with np.errstate(divide="ignore", invalid="ignore"):
-        metric_bub_cgs = vexp_cms**2 / t_exp
+        metric_bub_cgs = 0.5 * vexp_cms**2 / t_exp
     metric_bub = metric_bub_cgs * CM_METRIC_TO_KM_MYR
 
     # nring for coloring
@@ -434,7 +571,7 @@ def plot_v2_over_t_balance(
         print(f"[v2/t] {name}: min={np.nanmin(arr[m]):.6g}, max={np.nanmax(arr[m]):.6g}, N={np.count_nonzero(m)}")
 
     _print_minmax("R_kpc (x_pos)", x_pos)
-    _print_minmax("v2/t (y)", metric_bub)
+    _print_minmax("0.5 v2/t (y)", metric_bub)
     _print_minmax("n_ring [cm^-3]", nring)
 
     # Brinks+86 overlay (computed in the same metric)
@@ -455,22 +592,25 @@ def plot_v2_over_t_balance(
                 vexp_cms_b = dv_kms * 1e5
                 with np.errstate(divide="ignore", invalid="ignore"):
                     t_b = 0.6 * radius_pc * PC2CM / vexp_cms_b
-                    metric_b_cgs = vexp_cms_b**2 / t_b
+                    metric_b_cgs = 0.5 * vexp_cms_b**2 / t_b
                 metric_b = metric_b_cgs * CM_METRIC_TO_KM_MYR
 
                 mask_b = np.isfinite(br_r) & np.isfinite(metric_b)
                 if np.any(mask_b):
-                    edge_base = brinks_edge_color if brinks_edge_color is not None else brinks_marker_color
+                    fill_base = brinks_marker_color if brinks_face_color is None else brinks_face_color
+                    fill_alpha = brinks_edge_alpha if float(brinks_face_alpha) == 0 else brinks_face_alpha
+                    face_rgba = mcolors.to_rgba(fill_base, alpha=fill_alpha)
+                    edge_base = brinks_edge_color if brinks_edge_color is not None else "white"
                     edge_rgba = mcolors.to_rgba(edge_base, alpha=brinks_edge_alpha)
                     brinks_handle = ax.scatter(
                         br_r[mask_b],
                         metric_b[mask_b],
                         s=brinks_marker_size,
                         marker=brinks_marker,
-                        facecolor=edge_rgba,
-                        edgecolor=edge_rgba,
+                        facecolors=face_rgba,
+                        edgecolors=edge_rgba,
                         linewidths=max(brinks_marker_lw, 0.0),
-                        zorder=12,
+                        zorder=10,
                         label=brinks_label,
                     )
                 else:
@@ -528,13 +668,19 @@ def plot_v2_over_t_balance(
         data_colors = nring_colors
         facecolors = np.stack([np.r_[c[:3], bubble_marker_face_alpha] for c in data_colors])
 
+        if bubble_use_data_edgecolor and color_by_value and cmap is not None and norm is not None:
+            edgecolors = np.stack([np.r_[c[:3], bubble_marker_edge_alpha] for c in data_colors])
+        else:
+            edge_rgba = mcolors.to_rgba(bubble_marker_edge_color, alpha=bubble_marker_edge_alpha)
+            edgecolors = np.repeat(np.array(edge_rgba)[None, :], len(x_pos), axis=0)
+
         ax.scatter(
             x_pos, metric_bub,
             s=bubble_marker_size,
             marker=bubble_marker,
             facecolor=facecolors,
-            edgecolor="none",
-            linewidths=0,
+            edgecolor=edgecolors,
+            linewidths=bubble_marker_edge_lw,
             zorder=bubble_marker_zorder
         )
 
@@ -629,7 +775,10 @@ def plot_v2_over_t_balance(
             leg.get_frame().set_edgecolor(legend_edgecolor)
             leg.get_frame().set_alpha(legend_framealpha)
             leg.get_frame().set_linewidth(legend_edge_lw)
+        leg.set_zorder(100)
 
+    output_pdf = Path(output_pdf)
+    output_pdf.parent.mkdir(parents=True, exist_ok=True)
     plt.tight_layout()
     plt.savefig(output_pdf)
     plt.close()
@@ -646,33 +795,34 @@ if __name__ == "__main__":
 
         # turbulence band
         turb_xlim=(3, 33),
-        prof_max_path="../data/profile_resampled_max.tsv",
-        prof_min_path="../data/profile_resampled_min.tsv",
-        turb_color=(0.6, 0.6, 0.6, 0.45),
-        turb_edgecolor=(0.1, 0.1, 0.1, 0.85),
+        turb_table_path=DEFAULT_TURB_TABLE,
+        prof_max_path=REPO_ROOT / "data" / "profile_resampled_max.tsv",
+        prof_min_path=REPO_ROOT / "data" / "profile_resampled_min.tsv",
+        turb_color=(0.12, 0.12, 0.12, 0.35),
+        turb_edgecolor=(0.0, 0.0, 0.0, 0.0),
         turb_linewidth=0.0,
-        turb_zorder=-1000,
+        turb_zorder=10.25,
         turb_join="intersect",
         turb_extrapolate_union=True,
 
         # bubbles and ring table
-        bubble_table_path="../code/1113.tab",
-        alpha_fits="../data/alpha-m31-jcomb_modHeader.fits",
-        r_fits="../data/r-m31-jcomb_modHeader.fits",
-        ring_table_path="../code/1113.tab",
+        bubble_table_path=DEFAULT_BUBBLE_TABLE,
+        alpha_fits=DEFAULT_ALPHA_FITS,
+        r_fits=DEFAULT_R_FITS,
+        ring_table_path=DEFAULT_RING_TABLE,
         nring_column="n_HI_ring_cm-3",
 
         # Brinks+86 overlay
-        brinks_table_path="../data/brinks+86/brinks86_combined.fwf",
+        brinks_table_path=DEFAULT_BRINKS_TABLE,
         brinks_show=True,
         brinks_marker_size=BRINKS_MARKER_SIZE,
         brinks_marker=BRINKS_MARKER,
         brinks_marker_color=BRINKS_MARKER_COLOR,
         brinks_face_color=BRINKS_FACE_COLOR,
-        brinks_face_alpha=BRINKS_FACE_ALPHA,
-        brinks_edge_color=BRINKS_EDGE_COLOR,
-        brinks_edge_alpha=BRINKS_EDGE_ALPHA,
-        brinks_marker_lw=BRINKS_EDGE_LW,
+        brinks_face_alpha=0.55,
+        brinks_edge_color="white",
+        brinks_edge_alpha=1.0,
+        brinks_marker_lw=0.45,
         brinks_label=BRINKS_LABEL,
 
         # continuous coloring by n_ring (auto vmin/vmax)
@@ -687,12 +837,12 @@ if __name__ == "__main__":
         bubble_marker_size=BUBBLE_MARKER_SIZE,
         bubble_marker=BUBBLE_MARKER,
         bubble_base_face_color=BUBBLE_BASE_FACE_COLOR,
-        bubble_marker_face_alpha=BUBBLE_FACE_ALPHA,
+        bubble_marker_face_alpha=0.55,
         bubble_use_data_edgecolor=False,
-        bubble_marker_edge_color=BUBBLE_EDGE_COLOR,
-        bubble_marker_edge_alpha=BUBBLE_EDGE_ALPHA,
-        bubble_marker_edge_lw=BUBBLE_EDGE_LW,
-        bubble_marker_zorder=6,
+        bubble_marker_edge_color="white",
+        bubble_marker_edge_alpha=1.0,
+        bubble_marker_edge_lw=0.45,
+        bubble_marker_zorder=11,
         bubble_show_errorbar=BUBBLE_SHOW_ERRORBAR,
         bubble_errorbar_use_data_color=BUBBLE_ERRORBAR_USE_DATA_COLOR,
         bubble_errorbar_data_alpha=BUBBLE_ERRORBAR_DATA_ALPHA,
@@ -704,11 +854,11 @@ if __name__ == "__main__":
         # legend
         show_legend=True,
         legend_loc=BUBBLE_LEGEND_LOC,
-        legend_fontsize=BUBBLE_LEGEND_FONTSIZE,
+        legend_fontsize=8,
         legend_frame=True,
         legend_framealpha=BUBBLE_LEGEND_FRAMEALPHA,
-        legend_edgecolor=BUBBLE_LEGEND_EDGE_COLOR,
+        legend_edgecolor="black",
 
         # output
-        output_pdf="v2_over_t_balance.pdf",
+        output_pdf=DEFAULT_OUTPUT,
     )

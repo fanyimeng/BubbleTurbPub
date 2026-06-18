@@ -1010,7 +1010,7 @@ if __name__ == "__main__":
 
     # === Adjust these parameters as needed ===
     RUN_CONFIG = {
-        "bubble_tab": CODE_DIR / "1113.tab",
+        "bubble_tab": CODE_DIR / "m31_bubble_catalog_final_yes_118.tab",
         "output_tab": None,  # set to a path to write augmented table; None disables table output
         "mom0_fits": DATA_DIR / "jcomb_vcube_scaled2_mom0.fits",
         "r_fits": DATA_DIR / "r-m31-jcomb_modHeader.fits",

@@ -25,7 +25,7 @@ from matplotlib.lines import Line2D
 # -----------------------
 # Paths
 # -----------------------
-INPUT_TAB   = "../code/1113.tab"   # must contain p_rad_cgs, SN_weaver, n_HI_ring_cm-3
+INPUT_TAB   = "../code/m31_bubble_catalog_final_yes_118.tab"   # must contain p_rad_cgs, SN_weaver, n_HI_ring_cm-3
 OUTPUT_PDF  = "p_per_sn_vs_nsn.pdf"
 
 # -----------------------

@@ -84,7 +84,7 @@ ax.text(0.08, 0.92, '(a)', transform=ax.transAxes, fontsize=10, va='top', ha='le
 
 # 右图 KDE
 ax2 = axs[1]
-df = pd.read_fwf("../code/1113.tab", header=0, infer_nrows=int(1e6))
+df = pd.read_fwf("../code/m31_bubble_catalog_final_yes_118.tab", header=0, infer_nrows=int(1e6))
 x = abs(df['maj_as']/df['min_as'])
 kdeplot(data=x, kdeorder=0, kdecolor=(0.8, 0.8, 0.5, 0.8), kdeax=ax2, text='$M_\\mathrm{Hii}$ (All)')
 ax2.set_xlabel('$\\theta_{\\rm maj}/\\theta_{\\rm min}$')
