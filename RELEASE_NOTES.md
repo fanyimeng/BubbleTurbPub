@@ -2,7 +2,7 @@
 
 - Updated the 118-row catalogue to the final global-ring densities, momentum,
   expansion times and supernova counts. The 118 CAND identifiers and native
-  velocities are preserved. The separate 365-candidate CSV is unchanged.
+  velocities are preserved.
 - Updated the figure scripts and small input profiles to the final equations,
   including the 2.34e-24 g mean mass per H atom and the explicit Brinks corrections.
 - Added both final submitted source-data workbooks and a figure-number driver

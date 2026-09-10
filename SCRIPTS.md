@@ -39,7 +39,7 @@ See `plot_paper_pv_examples.py --help`; cutting new subcubes requires the explic
 `--allow-cut-from-full-cube` option.
 
 S3 uses the final diagnostic's stored plotting values, error bars and membership;
-it does not rerun classification or modify the 365-candidate archive.
+it does not rerun classification.
 Its purpose and presentation differ from the fiducial Figure 3.
 
 S4 uses the final 118-object axis ratios and matches the histogram counts in

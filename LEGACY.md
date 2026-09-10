@@ -12,8 +12,6 @@ material is retained for historical context, with its original conventions:
 - `code/brinks86_combine.py`, `code/brinks86_combine_with_regions.py`: original
   preparation utilities. The final figure scripts use the included comparison
   tables and the explicit corrections in `plot/paper_formula_common.py`.
-- `code/m31_bubble_candidates_final_yes_no_365.csv`: unchanged classification
-  archive. Use the separate final 118-row catalogue for physical quantities.
 
 Historical utilities may require their original environment, paths and inputs.
 Their assumptions, including any older velocity or density normalization, must

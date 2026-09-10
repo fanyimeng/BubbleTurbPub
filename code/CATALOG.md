@@ -45,7 +45,3 @@ each surrounding ellipse at twice its stored axis scale.
 the final rates are scaled once by 2.34/1.67. Do not apply that correction again.
 The Brinks comparison uses its own published velocity definition and the explicit
 corrections in `corrected_brinks`; these do not alter the new-bubble velocities.
-
-The separate `m31_bubble_candidates_final_yes_no_365.csv` is an existing candidate
-classification archive, unchanged in this release. Use the 118-row table above
-for final physical quantities and the figure scripts.

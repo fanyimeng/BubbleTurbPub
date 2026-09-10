@@ -32,3 +32,5 @@ data/rohsa_spectra_cache
 *Main_Article*
 *Supplementary_Information*
 /*.pdf
+
+/code/*candidates*.csv
