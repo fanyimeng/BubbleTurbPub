@@ -1,3 +1,5 @@
+> Historical utilities. For the final paper reproduction entry points, see [SCRIPTS.md](SCRIPTS.md).
+
 # initial_script Overview
 
 This folder contains early and ad-hoc scripts used to build the M31 HI bubble

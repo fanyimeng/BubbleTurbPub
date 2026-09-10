@@ -1,3 +1,5 @@
+
+from paper_formula_common import REPO_ROOT, RUN_ROOT
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -74,9 +76,9 @@ def _shrink_row_axes_horiz(ax_list, frac):
 
 def plot_five_panels_three_rows(
     # ===== 数据与表 =====
-    fits_rotated_a='../data/jcomb_submed.mom0.-600-45_rotated.fits',
-    table_path='../code/m31_bubble_catalog_final_yes_118.tab',
-    brinks_region_path="../data/b86_inpix_id.reg",
+    fits_rotated_a=str(REPO_ROOT / 'data/jcomb_submed.mom0.-600-45_rotated.fits'),
+    table_path=str(REPO_ROOT / 'code/m31_bubble_catalog_final_yes_118.tab'),
+    brinks_region_path=str(REPO_ROOT / 'data/b86_inpix_id.reg'),
     brinks_region_show=True,
     brinks_region_marker="^",
     brinks_region_size=45,
@@ -86,7 +88,7 @@ def plot_five_panels_three_rows(
     brinks_region_lw=0.0,
     brinks_region_alpha=0.7,
     brinks_region_zorder=6,
-    brinks_table_path="../data/brinks+86/brinks86_combined.fwf",
+    brinks_table_path=str(REPO_ROOT / 'data/brinks+86/brinks86_combined.fwf'),
     brinks_panel_e_show=True,
     brinks_panel_e_marker=None,
     brinks_panel_e_size=None,
@@ -121,9 +123,9 @@ def plot_five_panels_three_rows(
 
     # ===== (b)(c)(d) 三幅子图（横向）=====
     fits_path_list_center=(
-        '../data/b302_-94-88.fits',
-        '../data/b302_-88-82.fits',
-        '../data/b302_-82-76.fits'
+        str(REPO_ROOT / 'data/b302_-94-88.fits'),
+        str(REPO_ROOT / 'data/b302_-88-82.fits'),
+        str(REPO_ROOT / 'data/b302_-82-76.fits')
     ),
     xlim_arcmin=(-5, 5),
     ylim_arcmin=(-5, 5),
@@ -281,8 +283,12 @@ def plot_five_panels_three_rows(
     width_frac_mid=1.0,                  # 中行整体可用宽度比例(0~1)
     width_frac_bottom=1.0,               # 底行整体可用宽度比例(0~1)
 
+    # ===== 图像面板坐标轴标题 =====
+    image_x_label='x offset [arcmin]',
+    image_y_label='y offset [arcmin]',
+
     # ===== 输出 =====
-    output_name='r_v_diagram.pdf'
+    output_name=str(RUN_ROOT / 'r_v_diagram.pdf')
 ):
     """
     三行布局：
@@ -371,7 +377,7 @@ def plot_five_panels_three_rows(
     # ---------- 画布与网格：三行 ----------
     plt.rcParams.update({
         "figure.dpi": 90,
-        "savefig.dpi": 90,
+        "savefig.dpi": 400,
         "axes.labelsize": 10,
         "xtick.labelsize": 10,
         "ytick.labelsize": 10
@@ -395,6 +401,8 @@ def plot_five_panels_three_rows(
     ax_a.tick_params(labelbottom=True, labelleft=True, labelcolor='black')
     ax_a.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{int(x)}'"))
     ax_a.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{int(y)}'"))
+    ax_a.set_xlabel(image_x_label, labelpad=2)
+    ax_a.set_ylabel(image_y_label, labelpad=2)
     ax_a.text(0.02, 0.97, title_a, transform=ax_a.transAxes, fontsize=title_fs_a,
               color='white', va='top')
 
@@ -576,6 +584,11 @@ def plot_five_panels_three_rows(
 
         ax.text(0.05, 0.95, title_mid[idx], transform=ax.transAxes,
                 fontsize=title_fs_mid, color='white', va='top')
+
+    # Panels (b)--(d) share the same coordinate system. Use one title per
+    # direction to keep the narrow three-panel row legible at final size.
+    ax_b.set_ylabel(image_y_label, labelpad=2)
+    ax_c.set_xlabel(image_x_label, labelpad=2)
 
     _shrink_row_axes_horiz([ax_b, ax_c, ax_d], width_frac_mid)
     fig.subplots_adjust(hspace=hspace_mid_bottom)
@@ -882,93 +895,96 @@ def plot_five_panels_three_rows(
 
 
 # ====== 示例调用 ======
-if __name__ == '__main__':
+
+if __name__ == "__main__":
+    import paper_formula_common as formula
+    plt.rcParams["pdf.fonttype"] = 42
+    output = RUN_ROOT / "r_v_diagram.pdf"
     plot_five_panels_three_rows(
-        # 顶行 (a)
-        fits_rotated_a='../data/jcomb_submed.mom0.-600-45_rotated.fits',
-        table_path='../code/m31_bubble_catalog_final_yes_118.tab',
-        a_norm_kind='power', a_power_gamma=0.6,
-        a_vmin=0.1, a_vmax=10,
-        a_xlim_arcmin=(-110, 110), a_ylim_arcmin=(-40, 40),
+        fits_rotated_a=str(REPO_ROOT / "data" / "jcomb_submed.mom0.-600-45_rotated.fits"),
+        table_path=str(formula.CORRECTED_CATALOG),
+        brinks_region_path=str(REPO_ROOT / "data" / "b86_inpix_id.reg"),
+        brinks_table_path=str(REPO_ROOT / "data" / "brinks+86" / "brinks86_combined.fwf"),
+        a_norm_kind="power",
+        a_power_gamma=0.6,
+        a_vmin=0.1,
+        a_vmax=10,
+        a_xlim_arcmin=(-110, 110),
+        a_ylim_arcmin=(-40, 40),
         direction_angle_a=-52,
         rot_delta_deg=52.0,
         rotate_bubble_pos_deg=52.0,
-        dist_mpc=0.761, scalebar_kpc=5.0,
-
-        # 中行 (b)(c)(d)
+        dist_mpc=0.761,
+        scalebar_kpc=5.0,
         fits_path_list_center=[
-            '../data/b302_-94-88.fits',
-            '../data/b302_-88-82.fits',
-            '../data/b302_-82-76.fits'
+            str(REPO_ROOT / "data" / "b302_-94-88.fits"),
+            str(REPO_ROOT / "data" / "b302_-88-82.fits"),
+            str(REPO_ROOT / "data" / "b302_-82-76.fits"),
         ],
-        xlim_arcmin=(-5, 5), ylim_arcmin=(-5, 5),
+        xlim_arcmin=(-5, 5),
+        ylim_arcmin=(-5, 5),
         vmin_list_center=(0.01, 0.01, 0.01),
         vmax_list_center=(4.0, 4.0, 4.0),
-
-        # 标题与字号
-        title_a='(a)',
-        title_b=r'(b) $(-94,-88)$',
-        title_c=r'(c) $(-88,-82)$',
-        title_d=r'(d) $(-82,-76)$',
-        title_e='(e)',
-        title_fs_a=11, title_fs_mid=9, title_fs_e=11,
-
-        # 中行坐标文字显示选择
-        b_show_labels=True, c_show_labels=False, d_show_labels=False,
-
-        # 刻度密度
-        a_xtick_major=50.0, a_ytick_major=20.0,
-        mid_xtick_major=2.0,  mid_ytick_major=2.0,
-        e_xtick_major=None,   e_ytick_major=None,
-
-        # 底行 (e)：连续着色与点样式（color_vmin/color_vmax 默认自动取）
-        color_cmap='coolwarm',
-        r_curve_minmax=(90, 2000), n0=0.2,
-        rsn_list=(10, 1, 0.1), T_list=(10, 20, 40),
-
+        title_a="(a)",
+        title_b=r"(b) $(-94,-88)$",
+        title_c=r"(c) $(-88,-82)$",
+        title_d=r"(d) $(-82,-76)$",
+        title_e="(e)",
+        title_fs_a=11,
+        title_fs_mid=9,
+        title_fs_e=11,
+        b_show_labels=True,
+        c_show_labels=False,
+        d_show_labels=False,
+        a_xtick_major=50.0,
+        a_ytick_major=20.0,
+        mid_xtick_major=2.0,
+        mid_ytick_major=2.0,
+        e_xtick_major=None,
+        e_ytick_major=None,
+        color_cmap="coolwarm",
+        r_curve_minmax=(90, 2000),
+        n0=0.2,
+        rsn_list=(10, 1, 0.1),
+        T_list=(10, 20, 40),
         bubble_marker_size=65,
         bubble_marker_face_alpha=0.40,
         bubble_marker_edge_lw=0.8,
         bubble_marker_edge_alpha=0.95,
-    bubble_marker_edge_color=(0.9, 0.2, 0.2),
+        bubble_marker_edge_color=(0.9, 0.2, 0.2),
         bubble_marker_zorder=6,
-
         bubble_show_errorbar=True,
         bubble_errorbar_use_data_color=True,
         bubble_errorbar_data_alpha=0.0,
         bubble_errorbar_elinewidth=0.6,
         bubble_errorbar_capsize=0.0,
-        bubble_errorbar_linestyle='-',
+        bubble_errorbar_linestyle="-",
         bubble_errorbar_zorder=5,
-        err_frac_x=0.25, err_frac_y=0.25,
-
-        # 高亮（选择 'ring' / 'star' / 'emph'）
+        err_frac_x=0.25,
+        err_frac_y=0.25,
         highlight_id=104,
-        highlight_style='emph',
+        highlight_style="emph",
         hl_marker_size=45,
-
         hl_emph_a_facecolor=(1.0, 0.9, 0.2, 0.95),
-        hl_emph_a_edgecolor='k',
+        hl_emph_a_edgecolor="k",
         hl_emph_a_ellipse_lw=1.0,
-
         hl_emph_e_facecolor=(1.0, 0.9, 0.2, 0.95),
-        hl_emph_e_edgecolor='k',
+        hl_emph_e_edgecolor="k",
         hl_emph_e_point_size=75,
         hl_emph_e_point_edge_lw=1.0,
-
         auto_corner_links=True,
-
         figsize=(4.5, 7.5),
         height_ratios=(1.2, 1.0, 3.0),
         hspace_top_mid=-0.9,
         hspace_mid_bottom=-0.2,
-        mid_wspace=0.,
+        mid_wspace=0.0,
         mid_width_ratios=(1.0, 1.0, 1.0),
-        e_colorbar_size='4.5%',
+        e_colorbar_size="4.5%",
         e_colorbar_pad=0.01,
         width_frac_top=1.0,
         width_frac_mid=1.0,
         width_frac_bottom=1.0,
-
-        output_name='r_v_diagram.pdf'
+        image_x_label="x offset [arcmin]",
+        image_y_label="y offset [arcmin]",
+        output_name=str(output),
     )

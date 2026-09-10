@@ -1,37 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Dot-e bubble vs turbulence scatter (bubble dotE vs local turbulent dotE).
-
-Inputs
-------
-- bubble_table_path : Fixed-width bubble table (default: code/m31_bubble_catalog_final_yes_118.tab).
-- ring_table_path   : Ring table providing n_HI_ring_cm-3 (default: code/m31_bubble_catalog_final_yes_118.tab).
-- alpha_fits        : Angle map FITS for geometry.
-- r_fits            : Deprojected radius map FITS in pc.
-- turb_table_path   : Current panel-a ROHSA turbulence table with dote p16/p50/p84 columns.
-
-Outputs
--------
-- runs/checks/bubbleturbpub_panel_c/dot_e_vs_turb.pdf : Scatter of bubble dotE vs turbulent dotE.
-- Optional CSV (if export_table=True) with per-bubble values.
-
-Notes
------
-- dotE_bubble follows dot_e_balance: dotE = 0.5 * rho * v^3 / (h * pc2cm) in 10^-28 units,
-  with h_pc = 182 + 16 * R_kpc, rho = 1.673e-24 * n_ring.
-- Turbulent dotE is interpolated at each bubble radius from the current ROHSA
-  panel-a table by default, using the p50 branch for turb_value_mode='mean'.
-  The legacy min/max profile curves remain available as a fallback.
-"""
+"""Final-paper bubble energetics using native expansion velocities and t_exp = 0.6 r/v."""
 
 from __future__ import annotations
+
+from paper_formula_common import REPO_ROOT, RUN_ROOT
 
 import os
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-LOCAL_DIR = REPO_ROOT / ".local"
+SCRIPT_DIR = Path(__file__).resolve().parent
+BASE_RUN_ROOT = SCRIPT_DIR.parent
+RUN_ROOT = SCRIPT_DIR.parent / "output"
+REPO_ROOT = SCRIPT_DIR.parent
+LOCAL_DIR = RUN_ROOT / ".local"
 MPL_DIR = LOCAL_DIR / "matplotlib"
 CACHE_DIR = LOCAL_DIR / "cache"
 FONTCONFIG_DIR = CACHE_DIR / "fontconfig"
@@ -39,8 +21,6 @@ for directory in (MPL_DIR, CACHE_DIR, FONTCONFIG_DIR):
     directory.mkdir(parents=True, exist_ok=True)
 os.environ.setdefault("MPLCONFIGDIR", str(MPL_DIR))
 os.environ.setdefault("XDG_CACHE_HOME", str(CACHE_DIR))
-os.environ.setdefault("FONTCONFIG_PATH", "/opt/homebrew/etc/fonts")
-os.environ.setdefault("FONTCONFIG_FILE", "/opt/homebrew/etc/fonts/fonts.conf")
 os.environ.setdefault("FONTCONFIG_CACHE", str(FONTCONFIG_DIR))
 
 import numpy as np
@@ -52,19 +32,29 @@ from matplotlib.colors import Normalize
 from matplotlib import colors as mcolors
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from matplotlib.lines import Line2D
+from paper_formula_common import (
+    ALPHA_FITS,
+    CORRECTED_CATALOG,
+    CORRECTED_TURB_TABLE,
+    MU_H_G,
+    R_FITS,
+    SOURCE_BRINKS_TABLE,
+    bubble_dote_1e28,
+    corrected_brinks,
+)
 
 # constants
 pc2cm = 3e18
 COSI = np.cos(np.deg2rad(77.0))
-DEFAULT_TURB_TABLE = REPO_ROOT / "runs" / "checks" / "rohsa_compare" / "panel_a_rohsa_turbulence" / "merged_sampling_profile.tsv"
+DEFAULT_TURB_TABLE = CORRECTED_TURB_TABLE
 DEFAULT_PROF_MAX_PATH = REPO_ROOT / "data" / "profile_resampled_max.tsv"
 DEFAULT_PROF_MIN_PATH = REPO_ROOT / "data" / "profile_resampled_min.tsv"
-DEFAULT_BUBBLE_TABLE = REPO_ROOT / "catalog" / "working" / "m31_bubble_catalog_final_yes_118.tab"
-DEFAULT_RING_TABLE = REPO_ROOT / "catalog" / "working" / "m31_bubble_catalog_final_yes_118.tab"
-DEFAULT_ALPHA_FITS = REPO_ROOT / "data" / "alpha-m31-jcomb_modHeader.fits"
-DEFAULT_R_FITS = REPO_ROOT / "data" / "r-m31-jcomb_modHeader.fits"
-DEFAULT_BRINKS_TABLE = REPO_ROOT / "data" / "brinks+86" / "brinks86_combined.fwf"
-DEFAULT_OUTPUT = REPO_ROOT / "plot" / "dot_e_vs_turb.pdf"
+DEFAULT_BUBBLE_TABLE = CORRECTED_CATALOG
+DEFAULT_RING_TABLE = CORRECTED_CATALOG
+DEFAULT_ALPHA_FITS = ALPHA_FITS
+DEFAULT_R_FITS = R_FITS
+DEFAULT_BRINKS_TABLE = SOURCE_BRINKS_TABLE
+DEFAULT_OUTPUT = RUN_ROOT / "edot_pair_panel_a_dot_e_vs_turb.pdf"
 
 TURB_MOM0_COL = "x1_mom0"
 TURB_MOM2_COL = "x1_mom2"
@@ -169,7 +159,7 @@ def compute_turb_from_profile_df(df: pd.DataFrame, branch: str):
     # dissipation time ~ crossing time
     t_diss = np.where(v > 0.0, 2.0 * h_pc * pc2cm / v, np.inf)
 
-    rho = 1.67e-24 * n_HI
+    rho = MU_H_G * n_HI
     ek_density = 1.5 * rho * v**2
     rate = ek_density / t_diss * 1e28
     return r_kpc, rate
@@ -257,7 +247,9 @@ def compute_bubble_dote(
     ra_pix = df_bubble["ra_pix"]
     dec_pix = df_bubble["dec_pix"]
     r_bub_pc = df_bubble["radius_pc"].values
-    vexp_kms = df_bubble["expansion_vel"].values + 1  # small offset consistent with dot_e_balance
+    vexp_kms = pd.to_numeric(
+        df_bubble["expansion_vel"], errors="coerce"
+    ).to_numpy(dtype=float)
 
     angles = get_fits_at_pix(alpha_fits, ra_pix, dec_pix) - 90.0
     x_pos_pc = get_fits_at_pix(r_fits, ra_pix, dec_pix)
@@ -265,10 +257,7 @@ def compute_bubble_dote(
 
     nring = pd.to_numeric(df_ring[nring_column], errors="coerce").to_numpy(dtype=float)
 
-    h_pc = 182 + 16 * x_pos_kpc
-    rho = 1.673e-24 * nring
-    v_cms = (vexp_kms * 1e5)
-    dotE = 0.5 * rho * v_cms**3 / (h_pc * pc2cm) * 1e28  # in 10^-28 units
+    dotE = bubble_dote_1e28(r_bub_pc, vexp_kms, nring)
 
     return {
         "R_kpc": x_pos_kpc,
@@ -395,7 +384,7 @@ def plot_dot_e_vs_turb(
     bubble_marker_edge_alpha=BUBBLE_EDGE_ALPHA,
     bubble_marker_edge_lw=BUBBLE_EDGE_LW,
     bubble_marker_edge_color=BUBBLE_EDGE_COLOR,
-    bubble_marker_zorder=6,
+    bubble_marker_zorder=13,
     bubble_show_errorbar=BUBBLE_SHOW_ERRORBAR,
     bubble_errorbar_use_data_color=BUBBLE_ERRORBAR_USE_DATA_COLOR,
     bubble_errorbar_data_alpha=BUBBLE_ERRORBAR_DATA_ALPHA,
@@ -603,26 +592,14 @@ def plot_dot_e_vs_turb(
     if brinks_show and brinks_table_path is not None:
         bpath = Path(brinks_table_path)
         if bpath.exists():
-            bdf = pd.read_fwf(bpath)
-            required = ["R_kpc", "Diam_pc", "Age_Myr", "Mass_1e4Msun", "DV_kms"]
+            bdf = corrected_brinks(pd.read_fwf(bpath))
+            required = ["R_kpc", "dot_e_paper_1e-28"]
             missing = [c for c in required if c not in bdf.columns]
             if not missing:
                 r_b = pd.to_numeric(bdf["R_kpc"], errors="coerce").to_numpy(dtype=float)
-                diam_pc = pd.to_numeric(bdf["Diam_pc"], errors="coerce").to_numpy(dtype=float)
-                age_myr = pd.to_numeric(bdf["Age_Myr"], errors="coerce").to_numpy(dtype=float)
-                mass_1e4 = pd.to_numeric(bdf["Mass_1e4Msun"], errors="coerce").to_numpy(dtype=float)
-                dv_kms = np.abs(pd.to_numeric(bdf["DV_kms"], errors="coerce").to_numpy(dtype=float))
-
-                radius_cm = 0.5 * diam_pc * pc2cm
-                volume_cm3 = (4.0 / 3.0) * np.pi * radius_cm**3
-                age_s = age_myr * 1e6 * 3.154e7
-                mass_g = mass_1e4 * 1e4 * 1.989e33
-                v_cms = dv_kms * 1e5
-                energy_erg = 0.5 * mass_g * v_cms**2 * BRINKS_ENERGY_SCALE
-
-                with np.errstate(divide="ignore", invalid="ignore"):
-                    dote_b = energy_erg / (volume_cm3 * age_s)
-                dote_b_scaled = dote_b * 1e28
+                dote_b_scaled = pd.to_numeric(
+                    bdf["dot_e_paper_1e-28"], errors="coerce"
+                ).to_numpy(dtype=float)
 
                 turb_b = interpolate_turb_at_r(r_kpc_turb, rate_max, r_b)
                 turb_b2 = interpolate_turb_at_r(r_kpc_turb, rate_min, r_b)

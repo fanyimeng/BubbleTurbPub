@@ -1,3 +1,5 @@
+
+from paper_formula_common import REPO_ROOT, RUN_ROOT
 import numpy as np
 from astropy.io import fits
 from matplotlib.colors import PowerNorm
@@ -5,14 +7,17 @@ import matplotlib.pyplot as plt
 
 def plot_three_panels_arcmin_bottom_labels(
     fits_path_list,
-    output_name='fast_vla_jcomb_nHI_maps.pdf',
+    output_name=str(RUN_ROOT / 'fast_vla_jcomb_nHI_maps.pdf'),
     xlim_arcmin=(-180, 180),
     ylim_arcmin=(-60, 60),
     vmin_list=None,
     vmax_list=None,
     colorbar_pad=0.005,
     panel_labels=None,
-    direction_angle=52  # 默认 52°，竖直向上=0°，逆时针正
+    direction_angle=52,  # 默认 52°，竖直向上=0°，逆时针正
+    savefig_dpi=400,
+    x_axis_label='x offset [arcmin]',
+    y_axis_label='y offset [arcmin]',
 ):
     assert len(fits_path_list) == 3, "必须提供三个 FITS 文件路径"
     if vmin_list is None:
@@ -78,8 +83,8 @@ def plot_three_panels_arcmin_bottom_labels(
             ax.tick_params(labelbottom=True, labelleft=True, labelcolor='black')
             ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{int(x)}'"))
             ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{int(y)}'"))
-            ax.set_xlabel('')
-            ax.set_ylabel('')
+            ax.set_xlabel(x_axis_label)
+            ax.set_ylabel(y_axis_label)
 
             x_min, x_max = xlim_arcmin
             y_min, y_max = ylim_arcmin
@@ -118,21 +123,28 @@ def plot_three_panels_arcmin_bottom_labels(
     cbar.ax.yaxis.set_label_position('right')
     cbar.ax.tick_params(direction='in', length=7)
 
-    plt.savefig(output_name, dpi=200, bbox_inches='tight')
+    plt.savefig(output_name, dpi=savefig_dpi, bbox_inches='tight')
     plt.close()
 
 # ✅ 调用示例
-plot_three_panels_arcmin_bottom_labels(
-    fits_path_list=[
-        '../data/fast_mom0_rotated.fits',
-        '../data/vla_submed.mom0.-600-45_rotated.fits',
-        '../data/jcomb_submed.mom0.-600-45_rotated.fits'
-    ],
-    output_name='fast_vla_jcomb_nHI_maps.pdf',
-    xlim_arcmin=(-110, 110),
-    ylim_arcmin=(-40, 40),
-    vmin_list=np.array([0.5, 0.75, 0.5]) * 0.8,
-    vmax_list=np.array([60, 90, 60]) * 1.0,
-    panel_labels=['a. FAST', 'b. VLA', 'c. FAST+VLA'],
-    direction_angle=-52
-)
+if __name__ == "__main__":
+    import paper_formula_common as formula
+    plt.rcParams["pdf.fonttype"] = 42
+    output = RUN_ROOT / "fast_vla_jcomb_nHI_maps.pdf"
+    plot_three_panels_arcmin_bottom_labels(
+        fits_path_list=[
+            str(REPO_ROOT / "data/fast_mom0_rotated.fits"),
+            str(REPO_ROOT / "data/vla_submed.mom0.-600-45_rotated.fits"),
+            str(REPO_ROOT / "data" / "jcomb_submed.mom0.-600-45_rotated.fits"),
+        ],
+        output_name=str(output),
+        xlim_arcmin=(-110, 110),
+        ylim_arcmin=(-40, 40),
+        vmin_list=[0.4, 0.6, 0.4],
+        vmax_list=[60.0, 90.0, 60.0],
+        panel_labels=["a. FAST", "b. VLA", "c. FAST+VLA"],
+        direction_angle=-52,
+        savefig_dpi=400,
+        x_axis_label="x offset [arcmin]",
+        y_axis_label="y offset [arcmin]",
+    )

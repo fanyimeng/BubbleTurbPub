@@ -15,18 +15,22 @@ Markers:
 - Chevalier-used   : triangle '^'
 """
 
+from paper_formula_common import REPO_ROOT, RUN_ROOT
+
 import os
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
+from paper_formula_common import CORRECTED_CATALOG, RUN_ROOT
 
 # -----------------------
 # Paths
 # -----------------------
-INPUT_TAB   = "../code/m31_bubble_catalog_final_yes_118.tab"   # must contain p_rad_cgs, SN_weaver, n_HI_ring_cm-3
-OUTPUT_PDF  = "p_per_sn_vs_nsn.pdf"
+INPUT_TAB = CORRECTED_CATALOG
+OUTPUT_PDF = RUN_ROOT / "p_per_sn_vs_nsn.pdf"
 
 # -----------------------
 # Switch threshold (Weaver -> Chevalier)

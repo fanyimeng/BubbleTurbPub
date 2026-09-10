@@ -1,10 +1,11 @@
+
+from paper_formula_common import REPO_ROOT, RUN_ROOT
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 from scipy import stats
 import seaborn as sns
-from num2tex import num2tex
 
 from astropy.io import fits
 from astropy import wcs
@@ -26,9 +27,6 @@ def kdeplot(data, kdecolor, kdeorder, kdeax, text):
     facecolor = (*kdecolor[:3], 0.2)
     sns.histplot(data, kde=True, bins=10, color=kdecolor, edgecolor=kdecolor, log_scale=False, label=text, ax=kdeax)
     kdeax.plot(data, np.full_like(data, -0.03 * kdeorder - 0.1), '|', markeredgewidth=1, color=kdecolor)
-    mymean = num2tex(np.nanmean(data), precision=2)
-    mymed = num2tex(np.nanmedian(data), precision=2)
-    print('$\\leftarrow \\rm mean={}$'.format(num2tex(13.6e10, precision=2)))
     return [np.power(10, xx), kde(xx)]
 
 # ======== 椭圆误差分析函数（左图） ========
@@ -84,7 +82,7 @@ ax.text(0.08, 0.92, '(a)', transform=ax.transAxes, fontsize=10, va='top', ha='le
 
 # 右图 KDE
 ax2 = axs[1]
-df = pd.read_fwf("../code/m31_bubble_catalog_final_yes_118.tab", header=0, infer_nrows=int(1e6))
+df = pd.read_fwf(str(REPO_ROOT / 'code/m31_bubble_catalog_final_yes_118.tab'), header=0, infer_nrows=int(1e6))
 x = abs(df['maj_as']/df['min_as'])
 kdeplot(data=x, kdeorder=0, kdecolor=(0.8, 0.8, 0.5, 0.8), kdeax=ax2, text='$M_\\mathrm{Hii}$ (All)')
 ax2.set_xlabel('$\\theta_{\\rm maj}/\\theta_{\\rm min}$')
@@ -95,5 +93,5 @@ ax2.axhline(y=0, lw=1, linestyle='-')
 ax2.text(0.2, 0.92, '(b)', transform=ax2.transAxes, fontsize=10, va='top', ha='left')
 
 plt.tight_layout()
-plt.savefig("a_over_b_vs_r_over_sqrtab.pdf")
+plt.savefig(str(RUN_ROOT / 'a_over_b_vs_r_over_sqrtab.pdf'))
 plt.close()

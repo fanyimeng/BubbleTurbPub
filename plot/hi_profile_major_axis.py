@@ -1,3 +1,4 @@
+from paper_formula_common import REPO_ROOT, RUN_ROOT
 import numpy as np
 import pandas as pd
 from astropy.io import fits
@@ -7,7 +8,7 @@ import matplotlib.pyplot as plt
 def plot_full_panel(
     fits_path,
     profile_csv,
-    output_name='hi_profile_major_axis.pdf',
+    output_name='Mom0_h.pdf',
     xlim_kpc=(5.0, 21.0),
     ylim_pix=(1300, 1700),
     vmin=None,
@@ -41,7 +42,13 @@ def plot_full_panel(
     y0, y1 = ylim_pix
     cutout = data[y0:y1, x0:x1_]
     ny, nx = cutout.shape
-    extent = [xlim_kpc[0], xlim_kpc[1], 0, ny * pix2kpc]
+    disk_midplane_y_pix = 1500
+    extent = [
+        xlim_kpc[0],
+        xlim_kpc[1],
+        (y0 - disk_midplane_y_pix) * pix2kpc,
+        (y1 - disk_midplane_y_pix) * pix2kpc,
+    ]
 
     # 读 radial profile
     df = pd.read_fwf(profile_csv, infer_nrows=int(1e6))
@@ -166,13 +173,13 @@ def plot_full_panel(
     # (d) 图像
     norm = FuncNorm((np.arcsinh, np.sinh), vmin=vmin, vmax=vmax)
     axs['bottom'].imshow(cutout, origin='lower', cmap='RdYlBu_r', norm=norm, extent=extent)
-    axs['bottom'].set_xlabel('x [kpc]')
+    axs['bottom'].set_xlabel('major-axis distance $x$ [kpc]')
+    axs['bottom'].set_ylabel('minor-axis offset $y$ [kpc]')
     if bottom_ylim_kpc is not None:
         axs['bottom'].set_ylim(*bottom_ylim_kpc)
-    axs['bottom'].set_yticks([])
     axs['bottom'].tick_params(axis='x', direction='in')
-    axs['bottom'].tick_params(axis='y', length=0)
-    y_display = (1500 - y0) * pix2kpc
+    axs['bottom'].tick_params(axis='y', direction='in')
+    y_display = 0.0
     axs['bottom'].plot([ref_line_range[0], ref_line_range[1]], [y_display, y_display],
                        color='black', lw=2, ls='--')
     axs['bottom'].text(0.01, 0.97, '(d)', transform=axs['bottom'].transAxes,
@@ -184,9 +191,9 @@ def plot_full_panel(
 
 # === 调用示例 ===
 plot_full_panel(
-    fits_path='../data/bubbleTurbCube_x1beam_-700-100_0.006_mom0_rotated.fits',
-    profile_csv='../data/profile_output_VLA_JCOMB.txt',
-    output_name='hi_profile_major_axis.pdf',
+    fits_path=str(REPO_ROOT / 'data/bubbleTurbCube_x1beam_-700-100_0.006_mom0_rotated.fits'),
+    profile_csv=str(REPO_ROOT / 'data/profile_output_VLA_JCOMB.txt'),
+    output_name=str(RUN_ROOT / 'hi_profile_major_axis.pdf'),
     xlim_kpc=(2.0, 21.5),
     ylim_pix=(1350, 1650),
     vmin=1,

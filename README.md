@@ -1,137 +1,111 @@
 # M31 H I Superbubbles and Turbulence
 
-## Data Availability
+Data and figure-generation code accompanying the Nature Astronomy study of
+M31 H I superbubbles and turbulence.
 
-The data required to reproduce the analysis are available from the Tsinghua Cloud
-link: https://cloud.tsinghua.edu.cn/d/459ac2c2c8c847e68781/
+The plotting catalogue and equations match the final paper: 118 bubbles,
+the final global-ring H I densities, native expansion velocities, and the adopted
+momentum, expansion-time and supernova-count calculations. See the
+[catalogue definitions](code/CATALOG.md) and [figure index](SCRIPTS.md).
+Changes, including the source-data-consistent S4 histogram, are summarized in
+[RELEASE_NOTES.md](RELEASE_NOTES.md).
 
-The downloadable package is about 6 GB and includes the data-restore scripts and
-instructions. After downloading, follow the included instructions to run the
-rotation/restore script. The restored data products occupy about 18 GB on disk.
-The unrestored data files can also be opened directly; they are stored with the
-long axis horizontal to avoid disk space otherwise spent on NaN-only padding.
+## Quick start
 
-This repository contains the analysis scripts and figure-generation code for the
-M31 H I superbubble and turbulence study.
+Use Python 3.12 in an isolated environment:
 
-## Compiled Standalone Software and/or Source Code
+```bash
+git clone https://github.com/fanyimeng/BubbleTurbPub.git
+cd BubbleTurbPub
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python plot/p_per_sn_vs_nsn.py
+```
 
-- Source code only (no compiled binaries).
-- Primary scripts are in `plot/` and `initial_script` and helper code is in `code/`. 
+This small-table demo requires no FITS download. It writes
+`output/p_per_sn_vs_nsn.pdf`, using all 118 final catalogue entries. The expected
+paper output is [plot/p_per_sn_vs_nsn.pdf](plot/p_per_sn_vs_nsn.pdf).
 
-## System Requirements
+For the table-only supplementary figures together:
 
-Operating systems:
-- macOS 15.3 (arm64) as tested on this machine.
+```bash
+python plot/build_paper_figures.py S3 S4 S7
+```
 
-Tested versions (this machine):
-- macOS 15.3 (arm64)
-- Python 3.12.2 (conda-forge)
+Generated figures, caches and intermediate tables go to ignored directories;
+the reference PDFs in `plot/` and released input tables are preserved.
 
-Non-standard hardware:
-- None required. A machine with >30 GB free disk space is recommended if you
-  download the full FITS dataset.
+## Data
 
-Software dependencies (installed versions on this machine):
-- Python 3.12.2
-- `numpy`: 1.26.4
-- `pandas`: 2.2.2
-- `astropy`: 7.0.1
-- `matplotlib`: 3.9.2
-- `scipy`: 1.13.1
-- `seaborn`: 0.13.2
-- `tqdm`: 4.66.5
+- [Final 118-bubble catalogue](code/m31_bubble_catalog_final_yes_118.tab), with
+  [column definitions and conventions](code/CATALOG.md).
+- [Source Data](data/Source_Data.xlsx) and
+  [Supplementary Data](data/Supplementary_Data.xlsx): unchanged copies of the
+  final submitted workbooks.
+- Final turbulence profiles, Brinks comparison data and the frozen FM/RL
+  diagnostic plotting tables are included under `data/`.
+- The existing 365-candidate classification CSV is retained unchanged as an
+  archive. Final physical quantities come from the 118-row catalogue.
 
+The large image-data archive is available from
+[Tsinghua Cloud](https://cloud.tsinghua.edu.cn/d/459ac2c2c8c847e68781/).
+The archive was distributed as approximately 6 GB compressed and 18 GB restored.
+Use its restoration instructions to recover the original analysis grids;
+rotating an image for display does not preserve the pixel coordinates used here.
 
-Typical install time on a normal desktop computer:
-- 5 to 10 minutes.
+[DATA.md](DATA.md) lists the filenames and additional products required by each
+figure. FITS data are not stored in this Git repository. Personal-computer
+symlinks have been removed. Place the required files under `data/` or use local
+symlinks there; neither will be committed by default.
 
-## Demo
+## Reproduce figures
 
-Most scripts are lightweight and read small tabular inputs (for example
-`code/m31_bubble_catalog_final_yes_118.tab`), so they can be used as a demo without the large FITS files.
+After preparing the required data:
 
-Expected runtime on a normal desktop computer for most of the scripts:
-- < 5 seconds.
+```bash
+python plot/build_paper_figures.py 1 2 3 4
+python plot/build_paper_figures.py S5 S6 S8 S9 S10 S12 S13 S14
+```
 
-The PDF files in `plot/` are expected outputs
+The PV examples additionally require the two validated subcubes; the ROHSA
+overview requires existing fit products and cone masks:
 
-## Instructions for Use
+```bash
+python plot/build_paper_figures.py S2 S11
+```
 
-- Many plots require FITS inputs that are not versioned in git. Download and
-   place them under `data/` with the filenames referenced in each script.
-- The paper data package is available at:
-  https://cloud.tsinghua.edu.cn/d/459ac2c2c8c847e68781/
-  It is about 6 GB to download and about 18 GB after running the included
-  rotation/restore script. The unrestored files can also be opened directly;
-  they are stored with the long axis horizontal to avoid disk space otherwise
-  spent on NaN-only padding.
-- Execute the plot script you need, for example:
-   ```bash
-   python plot/dot_e_balance.py
-   ```
-- See `SCRIPTS.md` for the mapping between paper figures and scripts.
+`python plot/build_paper_figures.py --all` runs all 18 figure entry points.
+Individual scripts can also be run directly, from any working directory.
+See [SCRIPTS.md](SCRIPTS.md) for the exact mapping and outputs.
+The ROHSA figure redraws existing decompositions; it does not refit the cube.
 
-## Initial Script Folder
+## Environment and validation
 
-The `initial_script/` folder holds early, ad-hoc scripts used to assemble the
-HI bubble catalog, extract subcubes, and generate PV plots. Most scripts call
-the shared library `initial_script/bubturb.py`. For details, check https://github.com/fanyimeng/BubbleTurbPub/blob/main/INITIAL_SCRIPT.md
+The updated scripts were checked with Python 3.12 on macOS arm64 using NumPy 2.4.2,
+pandas 3.0.1, Astropy 7.2.0, Matplotlib 3.10.8 and SciPy 1.17.1.
+Seaborn is used for the axis-ratio histogram; pypdf composes vector PDF panels.
+`requirements.txt` lists compatible version ranges for these scripts.
 
-Common inputs and formats:
-- Fixed-width tables (`.tab`) read via `pd.read_fwf(...)` and written back with
-  `DataFrame.to_string(...)` or `tabulate`.
-- DS9 region files (`.reg`) for ellipse visualization and cross-checks.
-- Spectral cube FITS read via `spectral_cube.SpectralCube` and plotted with
-  `pvextractor`.
+The small-table demo takes a few seconds after the initial font-cache build.
+FITS-dependent figures require more time and memory; the full cube/ROHSA path
+requires the external data. Allow at least 30 GB free disk space for the restored
+archive and outputs. No GPU is required for the plotting commands.
 
-Key drivers and utilities (non-exhaustive):
-- `initial_script/app_v7.py` (and other `app_v#.py` versions): a lightweight
-  GUI we built to make manual bubble verification and parameter editing fast.
-- `initial_script/cc00_dfProcess.py`: table conversion pipeline driver.
-- `initial_script/cc01_subplot.py` / `initial_script/cc01_subplot_MP.py`: batch
-  PV plotting (single-process and multiprocessing).
-- `initial_script/CC03_trivial_parameters.py`: derived kinematic/size columns.
-- `initial_script/CC05_size_deconvolve.py`: beam deconvolution for radii.
-- `initial_script/ds9_2_pandas.py` and `initial_script/pandas_2_ds9.py`: DS9
-  region conversion utilities.
+## Historical code
 
+`initial_script/` contains the original catalogue/PV utilities. Earlier plot
+variants are retained for provenance and listed in [LEGACY.md](LEGACY.md).
+They are not the final-paper reproduction entry points above.
 
-## Paper Figures and Scripts
+## Article access and rights
 
-In `plot/` there are scripts for calculation and plotting that directly used in the manuscript. For details, check https://github.com/fanyimeng/BubbleTurbPub/blob/main/SCRIPTS.md
+This repository distributes supporting code, numerical data and standalone
+outputs generated by the code. It does not distribute manuscript text, accepted
+manuscripts, proofs, the publisher's article PDF or the complete Supplementary
+Information document. Access the article through its
+[DOI](https://doi.org/10.1038/s41550-026-02981-9).
 
-Figures are listed in the order they appear in `paper/main.tex`.
-
-**Full details are in** `SCRIPTS.md` **and** `INITIAL_SCRIPT.md` **(read these for
-complete steps, options, and file-by-file notes).**
-
-| Paper label | PDF in `plot/` | Generator script |
-| --- | --- | --- |
-| `f.three` | `fast_vla_jcomb_nHI_maps.pdf` | `plot/fast_vla_jcomb_nHI_maps.py` |
-| `f.momentzero` | `r_v_diagram.pdf` | `plot/r_v_diagram.py` |
-| `f.mainchart` (a) | `dot_e_balance.pdf` | `plot/dot_e_balance.py` |
-| `f.mainchart` (b) | `v2_over_t_balance.pdf` | `plot/v2_over_t_balance.py` |
-| `f.mainchart` (c) | `dot_e_vs_turb.pdf` | `plot/dot_e_vs_turb.py` |
-| `f.mainchart` (d) | `dot_e_vs_timescale_insets.pdf` | `plot/dot_e_vs_timescale_insets.py` |
-| `f.combineuv` | `hi_power_spectrum.pdf` | `plot/hi_power_spectrum.py` |
-| `f.aoverb` | `a_over_b_vs_r_over_sqrtab.pdf` | `plot/a_over_b_vs_r_over_sqrtab.py` |
-| `f.nhi_ring_preview` | `nhi_ring_masks.pdf` | `plot/nhi_ring_masks.py` |
-| `f.nsf` | `vexp_vs_shear_limit.pdf` | `plot/vexp_vs_shear_limit.py` |
-| `f.momentum` | `p_per_sn_vs_nsn.pdf` | `plot/p_per_sn_vs_nsn.py` |
-| `f.rvage` | `bubble_r_v_age_nsn_vs_r.pdf` | `plot/bubble_r_v_age_nsn_vs_r.py` |
-| `f.obsne` | `ob_sn_density_nhi.pdf` | `plot/ob_sn_density_nhi.py` |
-| `f.deltav_model` | `vlos_projection_broadening.pdf` | `plot/vlos_projection_broadening.py` |
-| `f.m31_profile` | `hi_profile_major_axis.pdf` | `plot/hi_profile_major_axis.py` |
-| `f.moltohiratio` | `h2_hi_ratio_vs_r.pdf` | `plot/h2_hi_ratio_vs_r.py` |
-
-Key plotting tables (short list):
-- `code/m31_bubble_catalog_final_yes_118.tab`: final 118-row paper bubble catalog used by the plotting scripts; also the ring table.
-- `code/m31_bubble_candidates_final_yes_no_365.csv`: final 365-candidate yes/no catalog, including rejected candidates.
-- `data/profile_resampled_{max,min,med}.tsv`: resampled radial profiles.
-- `data/profile_output_VLA_JCOMB.txt`: major-axis profile for `plot/hi_profile_major_axis.py`.
-- `data/brinks+86/brinks86_combined.fwf`: Brinks+86 comparison table.
-- `code/kang_09_table2.dat`: OB-star census table for `plot/ob_sn_density_nhi.py`.
-
-Other non-figure scripts:
-- `code/brinks86_combine.py`, `code/brinks86_combine_with_regions.py`: build Brinks+86 tables.
+The software licence does not grant rights to redistribute the published article.
+Article sharing is governed by the applicable publication licence and
+[Nature Portfolio's sharing policy](https://www.nature.com/nature-portfolio/editorial-policies/self-archiving-and-license-to-publish).

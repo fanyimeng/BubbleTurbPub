@@ -1,21 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Energy budget figure with a turbulence band, bubbles, optional MRI, and Brinks+86."""
+"""Isolated DOC-027 trial using the manuscript bubble and turbulence formulas."""
+
+from paper_formula_common import REPO_ROOT, RUN_ROOT
 
 import os
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-LOCAL_DIR = REPO_ROOT / ".local"
+SCRIPT_DIR = Path(__file__).resolve().parent
+BASE_RUN_ROOT = SCRIPT_DIR.parent
+RUN_ROOT = SCRIPT_DIR.parent / "output"
+REPO_ROOT = SCRIPT_DIR.parent
+TRIAL_DIR = RUN_ROOT / "derived"
+LOCAL_DIR = TRIAL_DIR / ".local"
 MPL_DIR = LOCAL_DIR / "matplotlib"
 CACHE_DIR = LOCAL_DIR / "cache"
 FONTCONFIG_DIR = CACHE_DIR / "fontconfig"
 for directory in (MPL_DIR, CACHE_DIR, FONTCONFIG_DIR):
     directory.mkdir(parents=True, exist_ok=True)
-os.environ.setdefault("MPLCONFIGDIR", str(MPL_DIR))
-os.environ.setdefault("XDG_CACHE_HOME", str(CACHE_DIR))
-os.environ.setdefault("FONTCONFIG_PATH", "/opt/homebrew/etc/fonts")
-os.environ.setdefault("FONTCONFIG_FILE", "/opt/homebrew/etc/fonts/fonts.conf")
+os.environ["MPLCONFIGDIR"] = str(MPL_DIR)
+os.environ["XDG_CACHE_HOME"] = str(CACHE_DIR)
 os.environ.setdefault("FONTCONFIG_CACHE", str(FONTCONFIG_DIR))
 
 import numpy as np
@@ -30,6 +34,16 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from matplotlib.legend_handler import HandlerTuple
 from matplotlib.patches import Rectangle
 from matplotlib.lines import Line2D
+from paper_formula_common import (
+    CORRECTED_CATALOG,
+    CORRECTED_TURB_TABLE,
+    MU_H_G,
+    MRI_PROFILE,
+    SOURCE_BRINKS_TABLE,
+    SOURCE_TURB_MU_H_G,
+    SOURCE_TURB_TABLE,
+    corrected_brinks,
+)
 
 # -----------------------
 # Constants and column choices
@@ -37,14 +51,14 @@ from matplotlib.lines import Line2D
 pc2cm = 3e18
 SEC_PER_MYR = 1e6 * 3.154e7
 COSI = np.cos(np.deg2rad(77.0))
-DEFAULT_TURB_TABLE = REPO_ROOT / "runs" / "checks" / "rohsa_compare" / "panel_a_rohsa_turbulence" / "merged_sampling_profile.tsv"
-DEFAULT_MRI_PROFILE = REPO_ROOT / "data" / "profile_resampled_med.tsv"
-DEFAULT_ROHSA_MRI_PROFILE = REPO_ROOT / "runs" / "checks" / "rohsa_compare" / "panel_a_rohsa_turbulence" / "merged_mri_profile.tsv"
-DEFAULT_BUBBLE_TABLE = REPO_ROOT / "catalog" / "working" / "m31_bubble_catalog_final_yes_118.tab"
+DEFAULT_TURB_TABLE = CORRECTED_TURB_TABLE
+DEFAULT_MRI_PROFILE = MRI_PROFILE
+DEFAULT_ROHSA_MRI_PROFILE = REPO_ROOT / "data" / "merged_mri_profile.tsv"
+DEFAULT_BUBBLE_TABLE = CORRECTED_CATALOG
 DEFAULT_ALPHA_FITS = REPO_ROOT / "data" / "alpha-m31-jcomb_modHeader.fits"
 DEFAULT_R_FITS = REPO_ROOT / "data" / "r-m31-jcomb_modHeader.fits"
-DEFAULT_RING_TABLE = REPO_ROOT / "catalog" / "working" / "m31_bubble_catalog_final_yes_118.tab"
-DEFAULT_BRINKS_TABLE = REPO_ROOT / "data" / "brinks+86" / "brinks86_combined.fwf"
+DEFAULT_RING_TABLE = DEFAULT_BUBBLE_TABLE
+DEFAULT_BRINKS_TABLE = SOURCE_BRINKS_TABLE
 
 FIG_DPI = 100
 SAVEFIG_DPI = 100
@@ -63,6 +77,21 @@ LEGEND_EDGE_COLOR = "black"
 LEGEND_EDGE_LW = 0.5
 LEGEND_ORDER = ("bubbles", "brinks", "turbulence", "mri")
 FIGSIZE_MAIN = (4.8, 4.8)
+
+PAPER_MU_H_G = MU_H_G
+
+# dot(e)_bubble is proportional to n_HI * v_exp^3 / r. Propagate the
+# manuscript's typical 20% uncertainties in n_HI, v_exp, and r.
+BUBBLE_RADIUS_FRAC_ERR = 0.20
+BUBBLE_VEXP_FRAC_ERR = 0.20
+BUBBLE_NHI_FRAC_ERR = 0.20
+BUBBLE_DOTE_FRAC_ERR = float(
+    np.sqrt(
+        BUBBLE_NHI_FRAC_ERR**2
+        + (3.0 * BUBBLE_VEXP_FRAC_ERR) ** 2
+        + BUBBLE_RADIUS_FRAC_ERR**2
+    )
+)
 
 BUBBLE_MARKER_SIZE = 65
 BUBBLE_MARKER = "o"
@@ -83,10 +112,10 @@ BRINKS_MARKER_COLOR = (0.6, 0.6, 0.9)
 BRINKS_ENERGY_SCALE = 0.44
 BRINKS_INSET_XLIM = (0,25)
 BRINKS_INSET_YLIM = (1e-3,5e6)
-BRINKS_INSET_WIDTH = "33%"
-BRINKS_INSET_HEIGHT = "33%"
+BRINKS_INSET_WIDTH = "29%"
+BRINKS_INSET_HEIGHT = "29%"
 BRINKS_INSET_LOC = "upper right"
-BRINKS_INSET_BORDERPAD = 0.8
+BRINKS_INSET_BORDERPAD = 2.4
 BRINKS_INSET_TEXT = "Brinks+86 (full)"
 BRINKS_INSET_TEXT_POS = (0.05, 0.95)
 BRINKS_INSET_TEXT_FONTSIZE = 7
@@ -102,7 +131,12 @@ BUBBLE_ERRORBAR_DATA_ALPHA = 0.4
 BUBBLE_ERRORBAR_ELINEWIDTH = 0.8
 BUBBLE_ERRORBAR_CAPSIZE = 0.0
 BUBBLE_ERRORBAR_LINESTYLE = "-"
-BUBBLE_ERRORBAR_ZORDER = 5
+MRI_SHADE_ZORDER = 1.0
+TURBULENCE_SHADE_ZORDER = 1.1
+BRINKS_MARKER_ZORDER = 2.0
+BUBBLE_ERRORBAR_ZORDER = 3.0
+BUBBLE_MARKER_ZORDER = 4.0
+AXIS_SPINE_ZORDER = 20.0
 
 # Which profile columns to use for turbulence computation:
 TURB_MOM0_COL = "x1_mom0"
@@ -110,6 +144,27 @@ TURB_MOM2_COL = "x1_mom2"
 TURB_TABLE_XCOL = "r_center_kpc"
 TURB_TABLE_LO_COL = "dote_p16_1e-28"
 TURB_TABLE_HI_COL = "dote_p84_1e-28"
+
+
+def prepare_paper_formula_turbulence_table() -> None:
+    """Rescale the stored ROHSA rates to the manuscript mean mass per H atom."""
+    table = pd.read_csv(SOURCE_TURB_TABLE, sep="\t")
+    rate_columns = ("dote_p16_1e-28", "dote_p50_1e-28", "dote_p84_1e-28")
+    missing = [column for column in rate_columns if column not in table.columns]
+    if missing:
+        raise KeyError(f"Missing turbulence-rate columns in {SOURCE_TURB_TABLE}: {missing}")
+
+    scale = PAPER_MU_H_G / SOURCE_TURB_MU_H_G
+    for column in rate_columns:
+        source_values = pd.to_numeric(table[column], errors="coerce")
+        table[f"{column}_source_muH_1p67"] = source_values
+        table[column] = source_values * scale
+    table.to_csv(DEFAULT_TURB_TABLE, sep="\t", index=False)
+    print(
+        "[EnergyBudget] Turbulence mu_H correction: "
+        f"{SOURCE_TURB_MU_H_G:.3e} -> {PAPER_MU_H_G:.3e} g "
+        f"(rate scale={scale:.9f})"
+    )
 
 
 # -----------------------
@@ -492,6 +547,8 @@ def _add_brinks_inset(
     iax.set_ylim(lim_y)
     iax.yaxis.set_minor_locator(mticker.NullLocator())
     iax.tick_params(direction="in", which="both", length=tick_length, labelsize=inset_text_fontsize, top=True, right=True)
+    iax.yaxis.tick_right()
+    iax.tick_params(axis="y", labelleft=False, labelright=True, pad=1.0)
     iax.text(
         inset_text_pos[0],
         inset_text_pos[1],
@@ -617,7 +674,7 @@ def plot_energy_budget_no_mri(
     legend_order=LEGEND_ORDER,
 
     # output
-    output_pdf="dot_e_balance.pdf",
+    output_pdf=str(RUN_ROOT / 'dot_e_balance.pdf'),
     panel_label="a",
     # figure and ticks
     figsize=FIGSIZE_MAIN,
@@ -654,6 +711,8 @@ def plot_energy_budget_no_mri(
     ax.tick_params(direction="in", which="both", length=tick_length_main, top=True, bottom=True, left=True, right=True)
     ax.xaxis.set_minor_formatter(mticker.ScalarFormatter())
     ax.yaxis.set_minor_locator(mticker.NullLocator())
+    for spine in ax.spines.values():
+        spine.set_zorder(AXIS_SPINE_ZORDER)
 
     # Turbulence band
     turb_band = draw_turb_band(
@@ -676,8 +735,8 @@ def plot_energy_budget_no_mri(
     df_bubble = pd.read_fwf(bubble_table_path, header=0, infer_nrows=int(1e6))
     ra_pix = df_bubble["ra_pix"]
     dec_pix = df_bubble["dec_pix"]
-    r_bub_pc = df_bubble["radius_pc"].values
-    vexp_kms = df_bubble["expansion_vel"].values + 1  # small offset, consistent with earlier usage
+    r_bub_pc = pd.to_numeric(df_bubble["radius_pc"], errors="coerce").to_numpy(dtype=float)
+    vexp_kms = pd.to_numeric(df_bubble["expansion_vel"], errors="coerce").to_numpy(dtype=float)
 
     angles = get_fits_at_pix(alpha_fits, ra_pix, dec_pix) - 90.0
     x_pos = get_fits_at_pix(r_fits, ra_pix, dec_pix) / 1e3  # kpc
@@ -696,11 +755,23 @@ def plot_energy_budget_no_mri(
             f"Please ensure the two tables are aligned row by row or add a common 'id' to join."
         )
 
-    # 4) use nring to compute dotE
-    h_pc = 182 + 16 * x_pos  # scale height
-    rho = 1.673e-24 * nring  # mass density
-    v_cms = (vexp_kms * 1e5)
-    dotE = 0.5 * rho * v_cms**3 / (h_pc * pc2cm) * 1e28
+    # 4) manuscript equations (Methods, eq. dotebubble):
+    #    t_exp = 0.6 r / v_exp
+    #    dot(e)_bubble = 0.5 mu_H n_HI v_exp^2 / t_exp
+    mu_h_g = PAPER_MU_H_G
+    v_cms = vexp_kms * 1e5
+    r_cm = r_bub_pc * pc2cm
+    valid = (
+        np.isfinite(nring)
+        & np.isfinite(v_cms)
+        & np.isfinite(r_cm)
+        & (v_cms > 0)
+        & (r_cm > 0)
+    )
+    t_exp_s = np.full(len(df_bubble), np.nan, dtype=float)
+    dotE = np.full(len(df_bubble), np.nan, dtype=float)
+    t_exp_s[valid] = 0.6 * r_cm[valid] / v_cms[valid]
+    dotE[valid] = 0.5 * mu_h_g * nring[valid] * v_cms[valid] ** 2 / t_exp_s[valid] * 1e28
 
     # print min and max
     def _print_minmax(name, arr):
@@ -788,7 +859,7 @@ def plot_energy_budget_no_mri(
             dr = r_bub_pc
             dxk = np.sqrt(dh**2 + dr**2) / 1e3
             xerr = dxk
-            yerr = 0.5 * dotE
+            yerr = BUBBLE_DOTE_FRAC_ERR * dotE
 
             if bubble_errorbar_use_data_color:
                 for xi, yi, xe, ye, col in zip(x_pos, dotE, xerr, yerr, data_colors):
@@ -846,7 +917,14 @@ def plot_energy_budget_no_mri(
                 )
                 if mri_mode == "shade":
                     ybase = ax.get_ylim()[0]
-                    mri_handle = ax.fill_between(x_mri, ybase, y_mri, color=mri_shade_color, linewidth=0.0, zorder=10.5)
+                    mri_handle = ax.fill_between(
+                        x_mri,
+                        ybase,
+                        y_mri,
+                        color=mri_shade_color,
+                        linewidth=0.0,
+                        zorder=MRI_SHADE_ZORDER,
+                    )
                 elif mri_mode == "line":
                     (mri_handle,) = ax.plot(
                         x_mri,
@@ -868,28 +946,36 @@ def plot_energy_budget_no_mri(
         if not brinks_path.exists():
             print(f"[EnergyBudget] Brinks86 table not found at {brinks_path}, skipping grey points.")
         else:
-            bdf = pd.read_fwf(brinks_path)
-            required_cols = ["R_kpc", "Diam_pc", "Age_Myr", "Mass_1e4Msun", "DV_kms"]
+            bdf = corrected_brinks(pd.read_fwf(brinks_path))
+            required_cols = [
+                "R_kpc",
+                "Diam_pc_corrected",
+                "t_exp_paper_Myr",
+                "v_exp_kms",
+                "nHI_updated_cm3",
+                "dot_e_paper_1e-28",
+            ]
             missing_cols = [c for c in required_cols if c not in bdf.columns]
             if missing_cols:
                 print(f"[EnergyBudget] Missing columns in Brinks86 table: {missing_cols}, skipping grey points.")
             else:
                 br_r = pd.to_numeric(bdf["R_kpc"], errors="coerce").to_numpy(dtype=float)
-                diam_pc = pd.to_numeric(bdf["Diam_pc"], errors="coerce").to_numpy(dtype=float)
-                age_myr = pd.to_numeric(bdf["Age_Myr"], errors="coerce").to_numpy(dtype=float)
-                mass_1e4 = pd.to_numeric(bdf["Mass_1e4Msun"], errors="coerce").to_numpy(dtype=float)
-                dv_kms = np.abs(pd.to_numeric(bdf["DV_kms"], errors="coerce").to_numpy(dtype=float))
-
-                radius_cm = 0.5 * diam_pc * pc2cm
-                volume_cm3 = (4.0 / 3.0) * np.pi * radius_cm**3
-                age_s = age_myr * SEC_PER_MYR
-                mass_g = mass_1e4 * 1e4 * 1.989e33
-                v_cms = dv_kms * 1e5
-                energy_erg = 0.5 * mass_g * v_cms**2 * BRINKS_ENERGY_SCALE
-
-                with np.errstate(divide="ignore", invalid="ignore"):
-                    dotE_phys = energy_erg / (volume_cm3 * age_s)
-                dotE_scaled = dotE_phys * 1e28
+                diam_pc = pd.to_numeric(
+                    bdf["Diam_pc_corrected"], errors="coerce"
+                ).to_numpy(dtype=float)
+                age_myr = pd.to_numeric(
+                    bdf["t_exp_paper_Myr"], errors="coerce"
+                ).to_numpy(dtype=float)
+                dv_kms = pd.to_numeric(
+                    bdf["v_exp_kms"], errors="coerce"
+                ).to_numpy(dtype=float)
+                n_hi_updated = pd.to_numeric(
+                    bdf["nHI_updated_cm3"], errors="coerce"
+                ).to_numpy(dtype=float)
+                dotE_scaled = pd.to_numeric(
+                    bdf["dot_e_paper_1e-28"], errors="coerce"
+                ).to_numpy(dtype=float)
+                dotE_phys = dotE_scaled / 1e28
 
                 mask = np.isfinite(br_r) & np.isfinite(dotE_scaled)
                 brinks_age_myr = br_r
@@ -900,9 +986,9 @@ def plot_energy_budget_no_mri(
                         "Seq": bdf.get("Seq", pd.Series([pd.NA] * len(bdf))),
                         "R_kpc": br_r,
                         "Diam_pc": diam_pc,
-                        "Age_Myr": age_myr,
-                        "Mass_1e4Msun": mass_1e4,
-                        "DV_kms": dv_kms,
+                        "t_exp_paper_Myr": age_myr,
+                        "v_exp_kms": dv_kms,
+                        "nHI_updated_cm3": n_hi_updated,
                         "dotE_erg_cm3_s": dotE_phys,
                         "dotE_1e-28": dotE_scaled,
                     })
@@ -922,7 +1008,7 @@ def plot_energy_budget_no_mri(
                         facecolors=face_rgba,
                         edgecolors=edge_rgba,
                         linewidths=max(brinks_marker_lw, 0.0),
-                        zorder=10,
+                        zorder=BRINKS_MARKER_ZORDER,
                         label="Brinks+86",
                     )
                 else:
@@ -1021,31 +1107,33 @@ def plot_energy_budget_no_mri(
     output_path = Path(output_pdf)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(output_path)
+    if output_path.suffix.lower() == str(RUN_ROOT / '.pdf'):
+        plt.savefig(output_path.with_suffix(str(RUN_ROOT / '.png')), dpi=200)
     plt.close()
 
 
 # -----------------------
 # Example call
 # -----------------------
-if __name__ == "__main__":
-    plot_energy_budget_no_mri(
-        # axes
-        xlim_full=(4, 28),
-        ylim=(3e-3, 3e3),
 
-        # turbulence band
+if __name__ == "__main__":
+    plt.rcParams["pdf.fonttype"] = 42
+    output = RUN_ROOT / "dot_e_balance.pdf"
+    if not DEFAULT_TURB_TABLE.exists():
+        raise FileNotFoundError(DEFAULT_TURB_TABLE)
+    plot_energy_budget_no_mri(
+        xlim_full=(4, 28),
+        ylim=(3e-3, 5e3),
         turb_xlim=(3, 33),
         turb_table_path=DEFAULT_TURB_TABLE,
-        prof_max_path=REPO_ROOT / "data" / "profile_resampled_max.tsv",
-        prof_min_path=REPO_ROOT / "data" / "profile_resampled_min.tsv",
+        prof_max_path=None,
+        prof_min_path=None,
         turb_color=(0.12, 0.12, 0.12, 0.35),
         turb_edgecolor=(0.0, 0.0, 0.0, 0.0),
         turb_linewidth=0.0,
-        turb_zorder=10.25,
+        turb_zorder=TURBULENCE_SHADE_ZORDER,
         turb_join="intersect",
         turb_extrapolate_union=True,
-
-        # MRI from resampled_med
         mri_show=True,
         mri_profile_path=DEFAULT_MRI_PROFILE,
         mri_xlim=(3, 33),
@@ -1055,22 +1143,16 @@ if __name__ == "__main__":
         mri_linewidth=0.6,
         mri_linestyle="--",
         mri_label=r"$\mathrm{MRI}$",
-
-        # bubbles and ring table
         bubble_table_path=DEFAULT_BUBBLE_TABLE,
         alpha_fits=DEFAULT_ALPHA_FITS,
         r_fits=DEFAULT_R_FITS,
         ring_table_path=DEFAULT_RING_TABLE,
         nring_column="n_HI_ring_cm-3",
-
-        # continuous coloring by n_ring (auto vmin/vmax)
         color_by_value=False,
         color_cmap_name="coolwarm",
         color_vmin=None,
         color_vmax=None,
         colorbar_label=r"$n_{\rm HI}$[cm$^{-3}$]",
-
-        # circles with data-colored error bars
         bubble_mode="circle",
         bubble_marker_size=BUBBLE_MARKER_SIZE,
         bubble_marker=BUBBLE_MARKER,
@@ -1080,7 +1162,7 @@ if __name__ == "__main__":
         bubble_marker_edge_color="white",
         bubble_marker_edge_alpha=1.0,
         bubble_marker_edge_lw=0.45,
-        bubble_marker_zorder=11,
+        bubble_marker_zorder=BUBBLE_MARKER_ZORDER,
         bubble_show_errorbar=BUBBLE_SHOW_ERRORBAR,
         bubble_errorbar_use_data_color=BUBBLE_ERRORBAR_USE_DATA_COLOR,
         bubble_errorbar_data_alpha=BUBBLE_ERRORBAR_DATA_ALPHA,
@@ -1088,21 +1170,19 @@ if __name__ == "__main__":
         bubble_errorbar_capsize=BUBBLE_ERRORBAR_CAPSIZE,
         bubble_errorbar_linestyle=BUBBLE_ERRORBAR_LINESTYLE,
         bubble_errorbar_zorder=BUBBLE_ERRORBAR_ZORDER,
-
         brinks_table_path=DEFAULT_BRINKS_TABLE,
         brinks_face_alpha=0.55,
         brinks_marker_edge="white",
         brinks_marker_edge_alpha=1.0,
         brinks_marker_lw=0.45,
-
-        # legend
+        brinks_export_table=False,
         show_legend=True,
         legend_loc="lower left",
         legend_fontsize=8,
         legend_frame=True,
         legend_framealpha=0.9,
         legend_edgecolor="black",
-
-        # output
-        output_pdf=REPO_ROOT / "plot" / "dot_e_balance.pdf",
+        output_pdf=output,
+        panel_label="",
     )
+    output.with_suffix(".png").unlink(missing_ok=True)

@@ -1,36 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Bubble dotE vs timescale (t_exp) with Brinks+86 comparison crosses and an inset showing the full Brinks sample.
-
-Bubble definitions:
-- dotE_bubble = 0.5 * rho * v^3 / (h_pc * pc2cm) * 1e28 (same as dot_e_balance).
-- t_exp,bub = 0.6 * r_pc / v_exp  (Myr), using expansion_vel column (+1 km/s offset, consistent with dot_e_balance).
-
-Brinks+86:
-- dotE_brinks recomputed as 0.5 * M * v^2 (M from Mass_1e4Msun, v = |DV_kms|) divided by (volume from Diam_pc) and Age_Myr.
-- t_exp,brinks = Age_Myr.
-
-Inputs
-------
-- bubble_table_path : code/m31_bubble_catalog_final_yes_118.tab
-- ring_table_path   : code/m31_bubble_catalog_final_yes_118.tab (for n_HI_ring_cm-3 used in bubble dotE)
-- alpha_fits        : data/alpha-m31-jcomb_modHeader.fits
-- r_fits            : data/r-m31-jcomb_modHeader.fits  (for R_kpc coloring)
-- brinks_table_path : data/brinks+86/brinks86_combined.fwf
-
-Output
-------
-- runs/checks/bubbleturbpub_panel_d/dot_e_vs_timescale_insets.pdf (by default)
-"""
+"""Final-paper bubble energetics using native expansion velocities and t_exp = 0.6 r/v."""
 
 from __future__ import annotations
+
+from paper_formula_common import REPO_ROOT, RUN_ROOT
 
 import os
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-LOCAL_DIR = REPO_ROOT / ".local"
+SCRIPT_DIR = Path(__file__).resolve().parent
+BASE_RUN_ROOT = SCRIPT_DIR.parent
+RUN_ROOT = SCRIPT_DIR.parent / "output"
+REPO_ROOT = SCRIPT_DIR.parent
+LOCAL_DIR = RUN_ROOT / ".local"
 MPL_DIR = LOCAL_DIR / "matplotlib"
 CACHE_DIR = LOCAL_DIR / "cache"
 FONTCONFIG_DIR = CACHE_DIR / "fontconfig"
@@ -38,8 +21,6 @@ for directory in (MPL_DIR, CACHE_DIR, FONTCONFIG_DIR):
     directory.mkdir(parents=True, exist_ok=True)
 os.environ.setdefault("MPLCONFIGDIR", str(MPL_DIR))
 os.environ.setdefault("XDG_CACHE_HOME", str(CACHE_DIR))
-os.environ.setdefault("FONTCONFIG_PATH", "/opt/homebrew/etc/fonts")
-os.environ.setdefault("FONTCONFIG_FILE", "/opt/homebrew/etc/fonts/fonts.conf")
 os.environ.setdefault("FONTCONFIG_CACHE", str(FONTCONFIG_DIR))
 
 import numpy as np
@@ -51,16 +32,26 @@ from matplotlib import ticker as mticker
 from matplotlib.colors import Normalize
 from matplotlib import colors as mcolors
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from paper_formula_common import (
+    ALPHA_FITS,
+    CORRECTED_CATALOG,
+    MU_H_G,
+    R_FITS,
+    SEC_PER_MYR,
+    SOURCE_BRINKS_TABLE,
+    bubble_dote_1e28,
+    corrected_brinks,
+    expansion_time_s,
+)
 
 pc2cm = 3e18
-SEC_PER_MYR = 1e6 * 3.154e7
 COSI = np.cos(np.deg2rad(77.0))
-DEFAULT_BUBBLE_TABLE = REPO_ROOT / "catalog" / "working" / "m31_bubble_catalog_final_yes_118.tab"
-DEFAULT_RING_TABLE = REPO_ROOT / "catalog" / "working" / "m31_bubble_catalog_final_yes_118.tab"
-DEFAULT_ALPHA_FITS = REPO_ROOT / "data" / "alpha-m31-jcomb_modHeader.fits"
-DEFAULT_R_FITS = REPO_ROOT / "data" / "r-m31-jcomb_modHeader.fits"
-DEFAULT_BRINKS_TABLE = REPO_ROOT / "data" / "brinks+86" / "brinks86_combined.fwf"
-DEFAULT_OUTPUT = REPO_ROOT / "plot" / "dot_e_vs_timescale_insets.pdf"
+DEFAULT_BUBBLE_TABLE = CORRECTED_CATALOG
+DEFAULT_RING_TABLE = CORRECTED_CATALOG
+DEFAULT_ALPHA_FITS = ALPHA_FITS
+DEFAULT_R_FITS = R_FITS
+DEFAULT_BRINKS_TABLE = SOURCE_BRINKS_TABLE
+DEFAULT_OUTPUT = RUN_ROOT / "edot_pair_panel_b_dot_e_vs_timescale.pdf"
 
 FIG_DPI = 100
 SAVEFIG_DPI = 100
@@ -163,18 +154,17 @@ def load_bubbles(
     ra_pix = df_bubble["ra_pix"]
     dec_pix = df_bubble["dec_pix"]
     r_bub_pc = pd.to_numeric(df_bubble["radius_pc"], errors="coerce").to_numpy(dtype=float)
-    vexp_kms = pd.to_numeric(df_bubble["expansion_vel"], errors="coerce").to_numpy(dtype=float) + 1.0
+    vexp_kms = pd.to_numeric(
+        df_bubble["expansion_vel"], errors="coerce"
+    ).to_numpy(dtype=float)
 
     x_pos_pc = get_fits_at_pix(r_fits, ra_pix, dec_pix)
     x_pos_kpc = x_pos_pc / 1e3
 
     nring = pd.to_numeric(df_ring[nring_column], errors="coerce").to_numpy(dtype=float)
 
-    h_pc = 182 + 16 * x_pos_kpc
-    rho = 1.673e-24 * nring
-    v_cms = vexp_kms * 1e5
-    dotE = 0.5 * rho * v_cms**3 / (h_pc * pc2cm) * 1e28  # 10^-28 units
-    t_exp_myr = 0.6 * r_bub_pc / vexp_kms  # Myr
+    dotE = bubble_dote_1e28(r_bub_pc, vexp_kms, nring)
+    t_exp_myr = expansion_time_s(r_bub_pc, vexp_kms) / SEC_PER_MYR
 
     return {
         "R_kpc": x_pos_kpc,
@@ -429,7 +419,7 @@ def plot_dot_e_vs_timescale(
         facecolor=facecolors[mask],
         edgecolor=edgecolors[mask],
         linewidths=bubble_marker_edge_lw,
-        zorder=5,
+        zorder=13,
     )
 
     brinks_handle = None
@@ -438,25 +428,16 @@ def plot_dot_e_vs_timescale(
     if brinks_show and brinks_table_path is not None:
         bpath = Path(brinks_table_path)
         if bpath.exists():
-            bdf = pd.read_fwf(bpath)
-            required = ["R_kpc", "Diam_pc", "Age_Myr", "Mass_1e4Msun", "DV_kms"]
+            bdf = corrected_brinks(pd.read_fwf(bpath))
+            required = ["t_exp_paper_Myr", "dot_e_paper_1e-28"]
             missing = [c for c in required if c not in bdf.columns]
             if not missing:
-                r_b = pd.to_numeric(bdf["R_kpc"], errors="coerce").to_numpy(dtype=float)
-                diam_pc = pd.to_numeric(bdf["Diam_pc"], errors="coerce").to_numpy(dtype=float)
-                age_myr = pd.to_numeric(bdf["Age_Myr"], errors="coerce").to_numpy(dtype=float)
-                mass_1e4 = pd.to_numeric(bdf["Mass_1e4Msun"], errors="coerce").to_numpy(dtype=float)
-                dv_kms = np.abs(pd.to_numeric(bdf["DV_kms"], errors="coerce").to_numpy(dtype=float))
-
-                radius_cm = 0.5 * diam_pc * pc2cm
-                volume_cm3 = (4.0 / 3.0) * np.pi * radius_cm**3
-                age_s = age_myr * SEC_PER_MYR
-                mass_g = mass_1e4 * 1e4 * 1.989e33
-                v_cms = dv_kms * 1e5
-                energy_erg = 0.5 * mass_g * v_cms**2 * BRINKS_ENERGY_SCALE
-                with np.errstate(divide="ignore", invalid="ignore"):
-                    dote_phys = energy_erg / (volume_cm3 * age_s)
-                dote_scaled = dote_phys * 1e28
+                age_myr = pd.to_numeric(
+                    bdf["t_exp_paper_Myr"], errors="coerce"
+                ).to_numpy(dtype=float)
+                dote_scaled = pd.to_numeric(
+                    bdf["dot_e_paper_1e-28"], errors="coerce"
+                ).to_numpy(dtype=float)
 
                 mb = np.isfinite(age_myr) & np.isfinite(dote_scaled)
                 brinks_age_myr = age_myr
@@ -494,7 +475,7 @@ def plot_dot_e_vs_timescale(
         for idx, (n0, r0, t0, col, ls) in enumerate(zip(n0_list, r0_list, t0_list, colors_list, ls_list)):
             r_pc_model = r0 * (t_model / t0) ** (3.0 / 5.0)
             v_cms_model = (3.0 / 5.0) * r_pc_model * pc2cm / t_sec_model
-            rho_model = 1.673e-24 * n0
+            rho_model = MU_H_G * n0
             dotE_model = 0.5 * rho_model * v_cms_model**2 / t_sec_model * 1e28  # 10^-28 units
             label_model = MODEL_LABEL_1.format(n0=n0) if idx == 0 else MODEL_LABEL_2.format(n0=n0)
             line = ax.plot(

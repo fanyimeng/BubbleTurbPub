@@ -1,3 +1,5 @@
+
+from paper_formula_common import REPO_ROOT, RUN_ROOT
 from astropy.io import fits
 from astropy import wcs
 from astropy import units as u
@@ -91,11 +93,11 @@ def plotProfile(ax,
     distances, values = convert_2d_to_1d(data_fftabs)
     xarr = (distances) * 41.27388 * 1.2e3 / half_size
     yarr = (values) * scale
-    xarr[xarr < 4.14e3 * 60 / las] = np.NaN
-    yarr[xarr < 4.14e3 * 60 / las] = np.NaN
+    xarr[xarr < 4.14e3 * 60 / las] = np.nan
+    yarr[xarr < 4.14e3 * 60 / las] = np.nan
 
-    xarr[xarr > 4.14e3 * 60 / beam] = np.NaN
-    yarr[xarr > 4.14e3 * 60 / beam] = np.NaN
+    xarr[xarr > 4.14e3 * 60 / beam] = np.nan
+    yarr[xarr > 4.14e3 * 60 / beam] = np.nan
 
     # # print(xarr)
     # yarr = radial_profile(data_fftabs, mycenter) * scale
@@ -166,7 +168,7 @@ ax.grid(which='major', alpha=0.2)
 # ax.set_ylim([1e5, 1e9])
 
 # ax.set_ylabel('Jy/arcsec$^2$')
-ax.set_ylabel('$\\mathrm{K\,km\,s^{-1}}$')
+ax.set_ylabel(r"Fourier amplitude $|\widetilde{W}_{\rm HI}(u,v)|$ [$\mathrm{K\,km\,s^{-1}}$]")
 ax.set_xlabel('$uv$ distance / $\\lambda$')
 
 # ax.axvline(x=4.14e3,
@@ -187,7 +189,7 @@ ax.axvline(x=4.14e3 * 60 / beam,
            color=(0.8, 0.3, 0.3, 0.9),
            label='100 $x$ COMBINED 1\' ~ $\\infty$')
 
-plotProfile(filename='../data/all-jcomb.fits.moment.integrated.fits',
+plotProfile(filename=str(REPO_ROOT / 'data/all-jcomb.fits.moment.integrated.fits'),
             ax=ax,
             color='Greys',
             beam=beam,
@@ -206,7 +208,7 @@ ax.axvline(x=4.14e3 * 60 / las,
            ls='--',
            color=(0.3, 0.3, 0.8, 0.9))
 
-plotProfile(filename='../data/contsub-02.fits.moment.integrated.fits',
+plotProfile(filename=str(REPO_ROOT / 'data/contsub-02.fits.moment.integrated.fits'),
             ax=ax,
             color='Blues',
             las=las,
@@ -220,7 +222,7 @@ ax.axvline(x=4.14e3 * 60 / beam,
            color=(0.8, 0.3, 0.3, 0.9),
            label='0.01 $x$ FAST 3\' ~ $\\infty$')
 
-plotProfile(filename='../data/fast-rg.fits.moment.integrated.fits',
+plotProfile(filename=str(REPO_ROOT / 'data/fast-rg.fits.moment.integrated.fits'),
             ax=ax,
             color='Reds',
             beam=beam,
@@ -256,5 +258,5 @@ legend_elements = [
 ]
 
 ax.legend(handles=legend_elements, loc='lower left')
-plt.savefig('./hi_power_spectrum.pdf')
+plt.savefig(RUN_ROOT / 'hi_power_spectrum.pdf')
 plt.clf()

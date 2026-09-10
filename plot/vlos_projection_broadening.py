@@ -12,6 +12,8 @@ Layout is adjustable at call time.
 Output PDF name is fixed to 'vlos_projection_broadening.pdf'.
 """
 
+from paper_formula_common import REPO_ROOT, RUN_ROOT
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
@@ -65,8 +67,8 @@ def plot_ab_panels_shared_cbar_continuous(
     R_max=30.0,
     R_steps=20,
     # ---- right panel (observed map, DEFINES the shared cmap/norm) ----
-    vlos_fits_path="../data/vlos_delta_abs.fits",
-    mom0_fits_path="../data/jcomb_submed.mom0.-600-45.fits",
+    vlos_fits_path=str(REPO_ROOT / 'data/vlos_delta_abs.fits'),
+    mom0_fits_path=str(REPO_ROOT / 'data/jcomb_submed.mom0.-600-45.fits'),
     xlim=(450, 2550),
     ylim=(300, 2700),
     cmap_b="RdYlBu_r",
@@ -102,7 +104,7 @@ def plot_ab_panels_shared_cbar_continuous(
     cbar_gap_b=0.06,
     cbar_width=0.05,
     # ---- output ----
-    output_name="vlos_projection_broadening.pdf"
+    output_name=str(RUN_ROOT / 'vlos_projection_broadening.pdf')
 ):
     """
     Produces a two-panel PDF named 'vlos_projection_broadening.pdf' with a SINGLE continuous colorbar from panel (b).
@@ -278,8 +280,8 @@ if __name__ == "__main__":
     ]
 
     plot_ab_panels_shared_cbar_continuous(
-        vlos_fits_path="../data/vlos_delta_abs.fits",
-        mom0_fits_path="../data/jcomb_submed.mom0.-600-45.fits",
+        vlos_fits_path=str(REPO_ROOT / 'data/vlos_delta_abs.fits'),
+        mom0_fits_path=str(REPO_ROOT / 'data/jcomb_submed.mom0.-600-45.fits'),
         cmap_b="RdYlBu_r",
         vmin_b=0.0, vmax_b=40.0,
         cbar_ticks=[0, 10, 20, 30, 40],  # optional explicit ticks for a clean continuous bar
@@ -301,5 +303,5 @@ if __name__ == "__main__":
         cbar_width=0.04,
         fig_size=(9.5, 4.8),
         # output fixed:
-        output_name="vlos_projection_broadening.pdf"
+        output_name=str(RUN_ROOT / 'vlos_projection_broadening.pdf')
     )

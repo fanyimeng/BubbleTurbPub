@@ -25,7 +25,10 @@ Extra for panel (e):
   with some padding so points and errorbars do not touch the frame.
 """
 
+from paper_formula_common import REPO_ROOT, RUN_ROOT
+
 import warnings
+from pathlib import Path
 from astropy.wcs import FITSFixedWarning
 warnings.simplefilter('ignore', FITSFixedWarning)
 
@@ -36,6 +39,15 @@ from matplotlib import ticker as mticker
 from matplotlib.colors import Normalize
 from matplotlib.patches import Rectangle
 from astropy.io import fits
+from paper_formula_common import (
+    ALPHA_FITS,
+    CORRECTED_CATALOG,
+    FINAL_REPLAY_ROOT,
+    R_FITS,
+    RUN_ROOT,
+    SEC_PER_MYR,
+    expansion_time_s,
+)
 
 # -----------------------
 # Constants
@@ -78,7 +90,7 @@ def _prep_bubble_data(bubble_table_path, r_fits_path, alpha_fits_path, mom0_fits
     bx = df["ra_pix"].to_numpy()
     by = df["dec_pix"].to_numpy()
     r_pc   = df["radius_pc"].to_numpy(float)
-    v_kms  = df["expansion_vel"].to_numpy(float) + 1.0  # keep consistent
+    v_kms = df["expansion_vel"].to_numpy(float)
 
     R_pc  = get_fits_at_pix(r_fits_path, bx, by)
     R_kpc = R_pc / 1.0e3
@@ -113,7 +125,7 @@ def _prep_bubble_data(bubble_table_path, r_fits_path, alpha_fits_path, mom0_fits
     dxk  = np.sqrt(dh**2 + r_pc**2) / 1.0e3  # kpc
 
     # age (Myr)
-    age_myr = 0.5 * r_pc / (v_kms * PC_PER_MYR_PER_KMS)
+    age_myr = expansion_time_s(r_pc, v_kms) / SEC_PER_MYR
 
     return dict(
         R_kpc=R_kpc,
@@ -300,10 +312,10 @@ def _draw_bubbles_fixed_red(
 # -----------------------
 def plot_bubble_r_v_age_aligned(
     # inputs
-    bubble_table_path="../code/0709-decon_hb.tab",
-    r_fits_path="../data/r-m31-jcomb_modHeader.fits",
-    alpha_fits_path="../data/alpha-m31-jcomb_modHeader.fits",
-    mom0_fits_path="../data/jcomb_vcube_scaled2_mom0.fits",
+    bubble_table_path=str(REPO_ROOT / 'code/m31_bubble_catalog_final_yes_118.tab'),
+    r_fits_path=str(REPO_ROOT / 'data/r-m31-jcomb_modHeader.fits'),
+    alpha_fits_path=str(REPO_ROOT / 'data/alpha-m31-jcomb_modHeader.fits'),
+    mom0_fits_path=str(REPO_ROOT / 'data/jcomb_vcube_scaled2_mom0.fits'),
 
     # layout parameters
     fig_size=(6.1, 9.4),
@@ -362,10 +374,10 @@ def plot_bubble_r_v_age_aligned(
     v_yerr_mode="fractional",   v_yerr_value=0.10,
     age_yerr_mode="fractional", age_yerr_value=0.20,
     n_yerr_mode="fractional",   n_yerr_value=0.20,   # panel d: fractional y-error, default ±20%
-    sn_yerr_mode="fractional",  sn_yerr_value=0.50,  # panel e: fractional y-error, default ±50%
+    sn_yerr_mode="fractional",  sn_yerr_value=0.70,  # panel e: fractional y-error, default ±70%
 
     # output
-    output_pdf="bubble_r_v_age_nsn_vs_r.pdf",
+    output_pdf=str(RUN_ROOT / 'bubble_r_v_age_nsn_vs_r.pdf'),
 ):
     # base style
     plt.rcParams.update({
@@ -537,10 +549,10 @@ def plot_bubble_r_v_age_aligned(
 # -----------------------
 if __name__ == "__main__":
     plot_bubble_r_v_age_aligned(
-        bubble_table_path="../code/m31_bubble_catalog_final_yes_118.tab",
-        r_fits_path="../data/r-m31-jcomb_modHeader.fits",
-        alpha_fits_path="../data/alpha-m31-jcomb_modHeader.fits",
-        mom0_fits_path="../data/jcomb_vcube_scaled2_mom0.fits",
+        bubble_table_path=CORRECTED_CATALOG,
+        r_fits_path=R_FITS,
+        alpha_fits_path=ALPHA_FITS,
+        mom0_fits_path=REPO_ROOT / "data" / "jcomb_vcube_scaled2_mom0.fits",
 
         # layout control
         fig_size=(6.1, 9.4),
@@ -554,7 +566,7 @@ if __name__ == "__main__":
         xlim=(4.0, 28.0),
         r_ylim=(0.0, 1200.0),
         v_ylim=(0.0, 38.0),
-        age_ylim=(0.0, 45.0),
+        age_ylim=(0.0, 50.0),
         n_ylim=None,
         sn_ylim=None,   # auto for panel (e)
 
@@ -574,7 +586,7 @@ if __name__ == "__main__":
         v_yerr_mode="fractional",   v_yerr_value=0.20,
         age_yerr_mode="fractional", age_yerr_value=0.30,
         n_yerr_mode="fractional",   n_yerr_value=0.20,
-        sn_yerr_mode="fractional",  sn_yerr_value=0.5,
+        sn_yerr_mode="fractional",  sn_yerr_value=0.70,
 
-        output_pdf="bubble_r_v_age_nsn_vs_r.pdf",
+        output_pdf=RUN_ROOT / "bubble_r_v_age_nsn_vs_r.pdf",
     )

@@ -39,6 +39,8 @@ Outputs
 
 from __future__ import annotations
 
+from paper_formula_common import REPO_ROOT, RUN_ROOT
+
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Iterable
@@ -740,8 +742,8 @@ def plot_rotated_mask_two_panels(
                 )
             )
 
-    ax_b.set_xlabel("arcmin")
-    ax_b.set_ylabel("arcmin")
+    ax_b.set_xlabel("x offset [arcmin]")
+    ax_b.set_ylabel("y offset [arcmin]")
 
     # 先对两个 panel 做 tight_layout，预留右侧空间
     fig.tight_layout(rect=[0.0, 0.0, 0.90, 1.0])
@@ -758,7 +760,7 @@ def plot_rotated_mask_two_panels(
     cbar = plt.colorbar(sm, cax=cax)
     cbar.set_label(r"$n_{\rm HI}$ [cm$^{-3}$]")
 
-    fig.savefig(output_path, dpi=200, bbox_inches="tight")
+    fig.savefig(output_path, dpi=400, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -917,7 +919,7 @@ def run_pipeline(
         elif output_pdf is not None:
             preview_path = output_pdf
         elif output_tab is not None:
-            preview_path = output_tab.with_name(output_tab.stem + "_rotmask.pdf")
+            preview_path = output_tab.with_name(output_tab.stem + str(RUN_ROOT / '_rotmask.pdf'))
         else:
             preview_path = None
 
@@ -1002,28 +1004,33 @@ def main(
     )
 
 
+
 if __name__ == "__main__":
-    PROJECT_BASE = project_root()
-    CODE_DIR = PROJECT_BASE / "code"
-    DATA_DIR = PROJECT_BASE / "data"
-    PLOT_DIR = PROJECT_BASE / "plot"
+    import paper_formula_common as formula
+    plt.rcParams["pdf.fonttype"] = 42
+    output_tab = RUN_ROOT / "derived" / "nhi_ring_runtime_recomputed.tab"
+    output = RUN_ROOT / "nhi_ring_masks.pdf"
+    main(
+        bubble_tab=formula.CORRECTED_CATALOG,
+        output_tab=output_tab,
+        mom0_fits=formula.NRING_MOM0_FITS,
+        r_fits=formula.R_FITS,
+        overwrite=True,
+        plot_mask_preview=True,
+        ring_scale=2.0,
+        plot_ring_preview=True,
+        rot_mom0_fits=formula.NRING_ROTATED_MOM0_FITS,
+        output_pdf=output,
+    )
 
-    # === Adjust these parameters as needed ===
-    RUN_CONFIG = {
-        "bubble_tab": CODE_DIR / "m31_bubble_catalog_final_yes_118.tab",
-        "output_tab": None,  # set to a path to write augmented table; None disables table output
-        "mom0_fits": DATA_DIR / "jcomb_vcube_scaled2_mom0.fits",
-        "r_fits": DATA_DIR / "r-m31-jcomb_modHeader.fits",
-        # Rotated mom0 fits used for previews (panel a/b)
-        "rot_mom0_fits": DATA_DIR / "jcomb_submed.mom0.-600-45_rotated.fits",
-        "overwrite": True,
-        "plot_mask_preview": True,
-        "mask_preview_pdf": None,
-        "ring_scale": 2.0,
-        "plot_ring_preview": True,
-        "ring_preview_pdf": None,
-        "output_pdf": PLOT_DIR / "nhi_ring_masks.pdf",
-    }
-
-    RESULT_PATH = main(**RUN_CONFIG)
-    print(f"[nHI] Finished: {RESULT_PATH}")
+    source = pd.read_fwf(formula.CORRECTED_CATALOG, header=0, infer_nrows=int(1e6))
+    runtime = pd.read_fwf(output_tab, header=0, infer_nrows=int(1e6))
+    expected = pd.to_numeric(source["n_HI_ring_cm-3"], errors="coerce").to_numpy(float)
+    actual = pd.to_numeric(runtime["n_HI_ring_cm-3"], errors="coerce").to_numpy(float)
+    if len(expected) != 118 or not np.allclose(
+        expected,
+        actual,
+        rtol=2.0e-5,
+        atol=1.0e-7,
+    ):
+        raise RuntimeError("Regenerated n_HI ring values do not match the final catalog")

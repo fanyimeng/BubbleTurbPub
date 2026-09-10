@@ -5,6 +5,8 @@ NSF shear-limit projection for M31 bubbles — styled scatter plot
 (Fixed red bubble markers; no data-driven coloring.)
 """
 
+from paper_formula_common import REPO_ROOT, RUN_ROOT
+
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -13,22 +15,29 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 from matplotlib.colors import BoundaryNorm, ListedColormap
 from matplotlib.lines import Line2D
+from paper_formula_common import (
+    ALPHA_FITS,
+    CORRECTED_CATALOG,
+    FINAL_REPLAY_ROOT,
+    R_FITS,
+    RUN_ROOT,
+)
 
 # =========================
 # User-configurable paths
 # =========================
-BUBBLE_TABLE_PATH = Path("../code/m31_bubble_catalog_final_yes_118.tab")
-ALPHA_FITS_PATH   = Path("../data/alpha-m31-jcomb_modHeader.fits")
-MOM0_FITS_PATH    = Path("../data/jcomb_vcube_scaled2_mom0.fits")
-RMAP_FITS_PATH    = Path("../data/r-m31-jcomb_modHeader.fits")
+BUBBLE_TABLE_PATH = CORRECTED_CATALOG
+ALPHA_FITS_PATH = ALPHA_FITS
+MOM0_FITS_PATH = REPO_ROOT / "data" / "jcomb_vcube_scaled2_mom0.fits"
+RMAP_FITS_PATH = R_FITS
 
 # === Optional exports (toggle to emit CSV/TXT summaries) ===
 EXPORT_TABLES = False  # set True to write CSV + TXT alongside the PDF
-OUT_CSV_PATH      = Path("./vexp_vs_shear_limit_projection_limits.csv")
-OUT_SUMMARY_PATH  = Path("./vexp_vs_shear_limit_summary.txt")
+OUT_CSV_PATH = RUN_ROOT / "derived" / "vexp_vs_shear_limit_projection_limits.csv"
+OUT_SUMMARY_PATH = RUN_ROOT / "derived" / "vexp_vs_shear_limit_summary.txt"
 
 # PDF always written (basename = script stem)
-OUT_PDF_PATH      = Path("./vexp_vs_shear_limit.pdf")
+OUT_PDF_PATH = RUN_ROOT / "vexp_vs_shear_limit.pdf"
 
 # =========================
 # Constants & geometry
@@ -124,8 +133,7 @@ cosi = np.cos(np.deg2rad(77.0))
 n_HI = N_HI / (2 * h_pc * pc2cm / cosi)
 
 # Total SN (仍保留，用于 CSV 和后续分析，但不再作染色)
-total_SN = ((df['radius_pc'].values * pc2cm)**3) * np.pi * (4/3) \
-           * 0.5 * n_HI * 1.4 * 1.67e-24 * (v_obs * 1e5)**2 / 1e51 * 11/3.
+total_SN = pd.to_numeric(df["SN_weaver"], errors="coerce").to_numpy(dtype=float)
 
 # 旧的 SN colormap 不再用于绘图，但变量保留以免其它地方引用出错
 norm_sn  = BoundaryNorm(boundaries=SN_BOUNDS, ncolors=len(SN_BOUNDS)-1)

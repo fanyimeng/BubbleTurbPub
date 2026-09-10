@@ -9,12 +9,14 @@ This version (v3+style+count+nHI-color, with tweaks):
   * 去掉网格；ticks 向内且四边显示。
   * x 轴标签统一为：Distance to M31's center: R [kpc]
   * 气泡（SNe scatter）默认更大。
-  * 所有 bubble 数据从 ../code/m31_bubble_catalog_final_yes_118.tab 读取。
+  * 所有 bubble 数据从 ../code/1113.tab 读取。
   * 气泡散点在 y 轴仍为 SNe 体积密度，使用固定红色（不按数据染色），边框关闭。
   * Kang+2009 只画灰色阴影，不再画线。
   * bubble alpha = 0.7。
   * 统计并打印所选年龄范围内的 SF region 数目（段1/段2/并集）。
 """
+
+from paper_formula_common import REPO_ROOT, RUN_ROOT
 
 import numpy as np
 import pandas as pd
@@ -24,6 +26,13 @@ from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 from typing import Optional, Tuple, List
+from paper_formula_common import (
+    ALPHA_FITS,
+    CORRECTED_CATALOG,
+    FINAL_REPLAY_ROOT,
+    R_FITS,
+    RUN_ROOT,
+)
 
 # -------- constants --------
 pc2cm = 3.08567758128e18
@@ -182,7 +191,7 @@ def plot_one_axis_OB_and_SNe(
     DRAW_OB2=True,
     scale_ob1, scale_ob2, scale_sne,
     label_ob1, label_ob2, label_sne,
-    out_pdf="ob_sn_density_nhi.pdf",
+    out_pdf=str(RUN_ROOT / 'ob_sn_density_nhi.pdf'),
     figsize=(4.5,4),
     xlim=None, ylim=None,
     y_label="$\\rho_{*}$ [$10^{3}\\,M_{\\odot}\\,{\\rm kpc^{-3}}$]",
@@ -285,11 +294,11 @@ def plot_one_axis_OB_and_SNe(
 
 # -------- main --------
 def main(
-    kang_path="../code/kang_09_table2.dat",
-    r_fits_path="../data/r-m31-jcomb_modHeader.fits",
-    bubble_tab_path="../code/m31_bubble_catalog_final_yes_118.tab",
-    mom0_fits_path="../data/jcomb_vcube_scaled2_mom0.fits",
-    alpha_fits_path="../data/alpha-m31-jcomb_modHeader.fits",
+    kang_path=str(REPO_ROOT / 'code/kang_09_table2.dat'),
+    r_fits_path=str(REPO_ROOT / 'data/r-m31-jcomb_modHeader.fits'),
+    bubble_tab_path=str(REPO_ROOT / 'code/m31_bubble_catalog_final_yes_118.tab'),
+    mom0_fits_path=str(REPO_ROOT / 'data/jcomb_vcube_scaled2_mom0.fits'),
+    alpha_fits_path=str(REPO_ROOT / 'data/alpha-m31-jcomb_modHeader.fits'),
     AGE_COL="Age_02",
     AGE1_MIN=10.0, AGE1_MAX=50.0,
     AGE2_MIN=None, AGE2_MAX=None,
@@ -302,8 +311,8 @@ def main(
     UNCERT_OB2="poisson",
     BAND_OB1=0.3, BAND_OB2=0.3,
     BOOT_B=2000, BOOT_CI=0.68,
-    XLIM=(5,28), YLIM=(-3,35),
-    out_pdf="ob_sn_density_nhi.pdf",
+    XLIM=(5,28), YLIM=(-3,50),
+    out_pdf=str(RUN_ROOT / 'ob_sn_density_nhi.pdf'),
     # SNe scatter style
     SNE_MARKER_SIZE=32,
     SNE_ALPHA=0.70,
@@ -378,12 +387,11 @@ def main(
     bx,by = bub["ra_pix"], bub["dec_pix"]
     R_pc_bub  = get_fits_at_pix(r_fits_path, bx, by)
     R_kpc_bub = R_pc_bub/1000.0
-    mom0 = get_fits_at_pix(mom0_fits_path, bx, by)
-    NHI = mom0*1.222e6/1.42/3600.*1.823e18
     h_pc = 182.0 + 16.0*R_kpc_bub
-    vexp = bub["expansion_vel"].to_numpy(float) + 1.0
     r_pc = bub["radius_pc"].to_numpy(float)
-    Nsn = compute_SN_per_bubble(r_pc, vexp, NHI, h_pc)
+    if "SN_weaver" not in bub.columns:
+        raise KeyError(f"SN_weaver missing in {bubble_tab_path}")
+    Nsn = pd.to_numeric(bub["SN_weaver"], errors="coerce").to_numpy(float)
     r_kpc = r_pc/1000.0
     Vbub = (4/3)*np.pi*(r_kpc**3)
     rho_bub = np.divide(Nsn, Vbub, out=np.full_like(Nsn, np.nan), where=Vbub>0)
@@ -426,7 +434,7 @@ def main(
     )
 
 if __name__ == "__main__":
-    # 示例调用：bubble 来自 ../code/m31_bubble_catalog_final_yes_118.tab（固定红色，不按数据染色）
+    # 示例调用：bubble 来自 ../code/1113.tab（固定红色，不按数据染色）
     main(
         SCALE_OB1=1/1e3/1,
         SCALE_OB2=1.0/5e3,
@@ -446,7 +454,11 @@ if __name__ == "__main__":
         SNE_ERR_ZORDER=1,
         SNE_YERR_FRAC=0.50,
 
-        bubble_tab_path="../code/m31_bubble_catalog_final_yes_118.tab",
+        kang_path=REPO_ROOT / "code" / "kang_09_table2.dat",
+        r_fits_path=R_FITS,
+        bubble_tab_path=CORRECTED_CATALOG,
+        mom0_fits_path=REPO_ROOT / "data" / "jcomb_vcube_scaled2_mom0.fits",
+        alpha_fits_path=ALPHA_FITS,
         BUBBLE_NHI_COL="n_HI_ring_cm-3",
-        out_pdf="ob_sn_density_nhi.pdf",
+        out_pdf=RUN_ROOT / "ob_sn_density_nhi.pdf",
     )
