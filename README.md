@@ -9,6 +9,9 @@ momentum, expansion-time and supernova-count calculations. See the
 Changes, including the source-data-consistent S4 histogram, are summarized in
 [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
+The [M31 H I 3D visualization specification](docs/m31-hi-visualization/) describes the
+collaboration prototype and includes observational overlays and render references.
+
 ## Quick start
 
 Use Python 3.12 in an isolated environment:
