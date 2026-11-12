@@ -6,7 +6,7 @@
 
 ## 图 1｜M31 定位图与 Bubble 31
 
-- **观测预览：** `assets/cover/carta-references/c24full32_pbmergedD_jcomb_step240_k0000_0499_mom0_contsub_linefree_n4a2m30_full500.fits-image-2026-08-17-00-16-16.png`。原 CARTA 画面等比缩小，保留赤经、赤纬和显示色标。用它说明星系定位的界面用途。定位和测量应使用对齐后的观测 FITS 与其 WCS。
+- 左图由 FAST 单独观测的积分强度 FITS `fast-rg_mom0_vminus700_to_minus30.fits` 绘制（SHA-256 `6233da69eb89bafd07afba8b9f87211b6c02c196422e4edb35ff6732509a3415`）。主文件头的望远镜和仪器均为 FAST，记录了对中心速度在 −700 至 −30 km/s 的通道做积分。波束 FWHM 为 174″。图件裁取星系周边区域，显示色标为 5–90 Jy beam⁻¹ km s⁻¹，采用线性拉伸。青色定位标记由 FITS 天球 WCS 投影 CAND238（Bubble 31）的目录中心得到。
 - **概念模型：** `outputs/bubble31_blender/bubble31_shell_macro_v4_preview.png`，生成脚本 `script/build_bubble31_shell_geometry.py`。投影强度引导局部表面细节和透明度；壳深、前侧窗口及灯光由模型设定。该画面用来讨论展示目标，图 2–4 的网格才按观测 VRAD 构造。
 
 ## 图 2｜Bubble 104 双路线

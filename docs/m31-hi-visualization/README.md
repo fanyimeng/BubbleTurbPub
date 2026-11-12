@@ -1,14 +1,12 @@
 # Visualizing M31 H I superbubbles in 3D
 
-*Collaboration specification for the Bailes team · English discussion draft · 12 November 2026*
-
 The prototype is an interactive 3D viewer. A viewer should be able to locate a superbubble on an M31 H I map, open its local position–position–velocity (PPV) scene, and move freely around the shell to inspect it from the sides, above and below. The viewer can zoom into a feature, clip through the cavity and check it against the observed channels. Bubble 31 and Bubble 104 are the first examples. For each object, the viewer should be able to switch between the cavity inner wall and the outer bright ridge while keeping the current viewpoint.
 
-![M31 integrated H I intensity and the early Bubble 31 shell concept](figures/01-m31-and-bubble31.webp)
+![FAST H I integrated intensity of M31 with Bubble 31 marked, beside its early shell concept](figures/01-m31-and-bubble31.webp)
 
-**Figure 1. From the galaxy map to the shell.** The left panel is an integrated H I intensity map of M31, shown in CARTA. Blue marks the area outside the displayed coverage. The right panel is an early Blender concept for Bubble 31. Projected emission guides its detail, while the shell depth and cutaway are set for the illustration. The two panels use independent framing. In the prototype, the locator on the galaxy map comes from the catalogue position and the map world coordinate system (WCS). [Figure provenance](figure-sources.md#figure-1-m31-map-and-bubble-31-concept)
+**Figure 1. From the galaxy map to the shell.** The left panel shows the FAST-only integrated H I intensity of M31. The cyan circle marks the catalogue centre of Bubble 31. The right panel is an early Blender concept for Bubble 31. Projected emission guides its detail, while the shell depth and cutaway are set for the illustration. The two panels use independent framing. In the prototype, the locator on the galaxy map comes from the catalogue position and the map world coordinate system (WCS). [Figure provenance](figure-sources.md#figure-1-m31-map-and-bubble-31-concept)
 
-[中文讨论稿](README.zh-CN.md) · [Figure provenance and historical implementation](figure-sources.md)
+[中文](README.zh-CN.md) · [Figure provenance and historical implementation](figure-sources.md)
 
 ## Scope and interfaces
 
