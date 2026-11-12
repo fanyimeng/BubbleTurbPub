@@ -2,7 +2,7 @@
 
 *Collaboration specification for the Bailes team · English discussion draft · 12 November 2026*
 
-The prototype should let a viewer locate a superbubble on an M31 H I map, open its local position–position–velocity (PPV) scene, and follow the same part of the shell as it rotates. A clipping plane or channel selector should expose the cavity and let the viewer check the shell against the observed emission. Bubble 31 and Bubble 104 are the first examples. For each object, compare the inner wall of the low-emission cavity and the bright ridge around it under a common coordinate system and camera setup.
+The prototype is an interactive 3D viewer. A viewer should be able to locate a superbubble on an M31 H I map, open its local position–position–velocity (PPV) scene, and move freely around the shell to inspect it from the sides, above and below. The viewer can zoom into a feature, clip through the cavity and check it against the observed channels. Bubble 31 and Bubble 104 are the first examples. For each object, the viewer should be able to switch between the cavity inner wall and the outer bright ridge while keeping the current viewpoint.
 
 ![M31 integrated H I intensity and the early Bubble 31 shell concept](figures/01-m31-and-bubble31.webp)
 
@@ -18,12 +18,12 @@ The starting data are the H I velocity cubes and cutouts already available to th
 | --- | --- | --- |
 | Data and coordinates | FITS cube or cutout, valid-data mask, catalogue and optional locator map | Normalized data and metadata, stable object identity, reversible mapping between native samples and the PPV scene |
 | Geometry | Normalized cutout, catalogue association and method settings | Inner-wall or outer-ridge geometry, native channel overlays, data-support annotations and geometry diagnostics |
-| Display and interaction | Geometry, volume, points and edges in the same scene coordinates | A scene with object selection, layer toggles, clipping and access to the native channels. Display presets and camera settings are stored independently of geometry |
-| Comparison and validation | Fixed input, geometry and display presets | Channel overlays, coordinate checks, fixed-camera views and a turntable, with enough provenance to reproduce the comparison |
+| Display and interaction | Geometry, volume, points and edges in the same scene coordinates | A live viewer with orbit, pan, zoom, object selection, layer toggles, clipping and access to native channels. Display presets and saved viewpoints are stored independently of geometry |
+| Comparison and validation | Matched input, geometry, display presets and saved viewpoints | Channel overlays, coordinate checks and evidence from live navigation. Saved views or a recorded orbit allow the same comparison to be repeated |
 
 ### Data and coordinate contract
 
-The three scene axes represent two positions on the sky and the observed line-of-sight velocity. The displayed depth is a scaled velocity difference. Save the scale, sign and zero point so that a scene position can be converted back to km/s. Near and far refer to the PPV camera. Physical distances along the line of sight require additional information. The prototype animates the camera or rotates the scene. Simulating gas motion would require a separate model.
+The three scene axes represent two positions on the sky and the observed line-of-sight velocity. The displayed depth is a scaled velocity difference. Save the scale, sign and zero point so that a scene position can be converted back to km/s. Near and far refer to the PPV camera. Physical distances along the line of sight require additional information. Changing the viewpoint leaves the PPV coordinates of the data and geometry intact.
 
 At ingest, record the FITS product identifier and SHA-256, HDU, shape, WCS, `BUNIT`, beam, spectral-axis type and units, channel spacing, effective spectral resolution, velocity reference frame and valid-data mask. In Python, use `[velocity, y, x]` with zero-based indices and apply the same axis operations to data and masks. Use `cand_label` (`CANDxxx`) as the stable key. Store the catalogue version, numeric bubble ID and any component identifier separately. Numeric IDs can recur, and some historical cutouts contain several components. [Final catalogue](../../code/m31_bubble_catalog_final_yes_118.tab) · [Column definitions](../../code/CATALOG.md)
 
@@ -91,11 +91,17 @@ The first inner-wall batch produced 16 meshes from nine cutouts and all passed t
 
 ![Four fixed-camera Blender views of the same Bubble 32 ridge model at 0, 90, 180 and 270 degrees](figures/04-bubble32-four-views.webp)
 
-**Figure 4. A turntable reference.** The Bubble 32 ridge model (CAND074) rotates about the displayed Dec axis with fixed camera and lighting. All four panels use the same crop. The geometry carries a review flag. Use the sequence as a framing and shape-tracking reference when adding translucent gas and shell layers. [Four-view render provenance](figure-sources.md#figure-4-bubble-32-four-views)
+**Figure 4. Four views for visual comparison.** These historical renders show the Bubble 32 ridge model (CAND074) at four rotations about the displayed Dec axis, using fixed lighting, camera and crop. The geometry carries a review flag. The panels provide repeatable reference views. In the live viewer, intermediate angles and changes in elevation should be available continuously. [Four-view render provenance](figure-sources.md#figure-4-bubble-32-four-views)
 
 ## Rendering and depth cues
 
-The open question is how well a viewer can follow foreground and background structure through translucent gas. Compare the gas layer alone, then with baseline points, edges, extra points near the shell and the combined preset. Hold geometry, camera, lighting, exposure and the base transfer function fixed across the comparison. A fixed model with a moving camera also reveals parallax and compositing behaviour. Start with depth of field and strong bloom disabled.
+### Interactive navigation
+
+Use an orbit centred on the selected object or region. The viewer should allow a full 360° orbit in azimuth, a continuous change in elevation to look above and below the shell, and pan, zoom, focus and reset controls. Switching geometry routes, display layers or velocity ranges should preserve the current camera pose and zoom. The renderer should update occlusion, transparency and view-dependent silhouettes as the camera moves. Data-derived points, ridge traces and channel overlays remain registered in PPV.
+
+### Comparing display layers
+
+The open question is how well a viewer can follow foreground and background structure through translucent gas while navigating. Compare the gas layer alone, then with baseline points, edges, extra points near the shell and the combined preset. Use the same camera pose or recorded camera path for each comparison, with matched geometry, lighting, exposure and base transfer function. Check the same presets during free navigation, including elevated and close-up views. Start with depth of field and strong bloom disabled.
 
 ![Synthetic experiment showing baseline gas points, an edge layer and additional points near a shell](figures/05-proposed-points-edges.webp)
 
@@ -121,7 +127,7 @@ A preset designed to preserve intensity can use `I/p` for a linear sum over sele
 | Camera and point size | Vertical field of view of 30°, 45° or 60°, with an orthographic reference. About 1–3 px point diameter and line width at 1080p |
 | Volume step | 0.5–1 times the smallest displayed voxel dimension. Recalibrate brightness as the step changes, for example with `alpha = 1 − exp(−κΔs)` for a chosen transfer function |
 
-The scene should support object picking, layer toggles, preset or threshold selection, velocity range, clipping, opacity and camera reset. Picking should expose the stable catalogue ID, velocity interval and review status. Use the native-channel view to follow the source of an outline. Test transparency with intersecting shells and gas across the full turntable, where ordering errors are easiest to see.
+Object picking should expose the stable catalogue ID, velocity interval and review status. The viewer should also provide layer, preset or threshold, opacity, velocity-range and clipping controls. The native-channel view should follow the selected object and channel. Test transparency by orbiting and zooming through views of overlapping shells and gas where their order changes.
 
 ## Asset exchange
 
@@ -142,8 +148,8 @@ Use explicit units and axis labels for all transforms. For a format check, round
 | Area | What the comparison should show |
 | --- | --- |
 | Geometry | Both routes for Bubbles 31 and 104 use the same input and display coordinates. Overlay the surfaces at central, end and weak-support channels. Record offsets, boundary or prior effects, openings and added closure faces. Report boundary edges, non-manifold edges, self-intersections and normal consistency separately from observational support |
-| Display | Save the fixed-camera 0°, 90°, 180° and 270° views and a continuous turntable. Include a sparse-channel and an overlapping-component case. Check that landmarks remain trackable, transparency has no obvious jumps and the object stays in frame. Compare projected intensity before and after changing the sampling density |
+| Display | In the live viewer, orbit through 360°, change elevation, zoom to a feature, then switch geometry and clip or select a channel from that pose. Check that landmarks remain registered and that transparency updates without obvious jumps, including in the overlapping-component case. Inspect the sparse-channel case from multiple directions. Saved views at 0°, 90°, 180° and 270° or a recorded orbit provide repeatable evidence for the comparison, including projected intensity before and after changing sample density |
 | Reproduction | Record inputs and hashes, geometry version and settings, transforms, display preset, camera, and commands needed to reproduce the scene. Keep review and failure reasons with the object so a rerun can start from the affected stage |
-| Performance | Record hardware, resolution, point and triangle counts, memory, load time, and median and 95th percentile frame times. Once the desktop GPU is agreed, 1080p at 30 fps is a proposed initial target |
+| Performance | Measure frame times during orbit and zoom with gas and shell layers visible. Record hardware, resolution, point and triangle counts, memory, load time, and median and 95th percentile frame times. Once the desktop GPU is agreed, 1080p at 30 fps is a proposed initial target |
 
 The choices for the first discussion are the matched cutouts and catalogue revision, the shared velocity scale and legend, the target hardware and rendering pipeline, and the acceptable offsets and endpoint regularization. The bright ridge is a starting point for a shell overview, with the inner wall available for cavity inspection. The paired views provide the basis for deciding which representation best serves each view.
